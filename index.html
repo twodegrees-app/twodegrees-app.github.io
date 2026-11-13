@@ -183,6 +183,7 @@ body.on-cover .card.a,body.on-cover .card.b{background:rgba(255,255,255,.72);col
 .rv-sum strong{font-size:15px;display:flex;gap:8px;align-items:center}
 .rv-sum span{font-size:13px;color:#5E6670}
 .rv-new{font-style:normal;font-size:12px;font-weight:500;color:#A0541A;background:#FBE6CF;border-radius:999px;padding:1px 8px}
+.rv-new.rv-unf{background:#ECE6DE;color:#6B5E52;margin-left:6px}
 .rv-body{padding:0 16px 16px;display:grid;gap:12px;font-size:14px;line-height:1.7}
 .rv-body h4{margin:0;font-size:13px;color:#8A6A55;font-weight:600}
 .rv-body p{margin:0}
@@ -534,7 +535,33 @@ function quizReset(){S.q[role]=blankQ1();S.q[role].started=true;draft[role]={};v
 const QUIZ_RESET={reset:quizReset,confirm:"你這次的作答會清除，從第一題重新開始。"};
 function nowReset(){S.qn[role]=blankN1();draft[role].now=null}
 const NOW_RESET={reset:nowReset,confirm:"你這次填的內容會清除，重新作答。"};
-function repairReset(){S.call=null;S.a=blankPerson();S.b=blankPerson();S.final={text:"",ok:{a:false,b:false}};draft={a:{},b:{}}}
+function repairHasContent(){return !!(S.a.reasons||S.b.reasons||S.a.entry||S.b.entry||S.a.paused||S.b.paused)}
+function repairCancelNow(){
+  if(repairHasContent()){S.rh=S.rh||[];S.rh.push({...repairRec(),date:today(),unfinished:true,stopAt:STEPS[Math.max(0,Math.min(stage("a").step,stage("b").step))]||""})}
+  S.cancelReq=null; repairReset();
+}
+function repairRequestCancel(){
+  if(!S.names[other(role)]){repairCancelNow();return}
+  S.cancelReq={by:role,at:Date.now()};
+}
+function cancelBanner(){
+  const c=S.cancelReq; if(!c)return "";
+  const o=nm(other(role));
+  if(c.by===role) return `<div class="notify-card" role="status"><p class="seg-auto">已經請${esc(o)}確認：兩個人都同意才會取消這次的修復。在對方回覆之前，可以繼續填寫。</p><button type="button" class="btn ghost" id="cr-undo">收回請求</button></div>`;
+  return `<div class="call-card" role="status"><span class="call-dot" aria-hidden="true"></span><div><strong>${esc(nm(c.by))}想取消這次的修復</strong><p class="seg-auto">同意之後，兩個人目前填的內容會先存進「回顧」，再從頭開始。</p><div class="actions" style="margin:0"><button type="button" class="btn" id="cr-yes">同意取消</button><button type="button" class="btn ghost" id="cr-no">繼續這次的修復</button></div></div></div>`;
+}
+function cancelNoteHtml(){
+  const n=S.cancelNote; if(!n||n.to!==role)return "";
+  return `<div class="notify-card" role="status"><p class="seg-auto">${esc(nm(other(role)))}希望繼續這次的修復，所以沒有取消。</p><button type="button" class="btn ghost" id="cn-ok">知道了</button></div>`;
+}
+function wireCancel(){
+  const g=id=>document.getElementById(id), go=()=>{save();lastKey="";render()};
+  if(g("cr-undo"))g("cr-undo").onclick=()=>{S.cancelReq=null;go()};
+  if(g("cr-yes"))g("cr-yes").onclick=()=>{repairCancelNow();view={};go()};
+  if(g("cr-no"))g("cr-no").onclick=()=>{S.cancelNote={to:S.cancelReq.by};S.cancelReq=null;go()};
+  if(g("cn-ok"))g("cn-ok").onclick=()=>{S.cancelNote=null;go()};
+}
+function repairReset(){S.call=null;S.cancelReq=null;S.cancelNote=null;S.a=blankPerson();S.b=blankPerson();S.final={text:"",ok:{a:false,b:false}};draft={a:{},b:{}}}
 function repairNav(st){
   const me=S[role]; let back=null, bt="上一步";
   switch(st.k){
@@ -546,7 +573,10 @@ function repairNav(st){
       else if(st.step===2&&me.entry){back=()=>{const e=me.entry;Object.assign(draft[role],{feel:{...e.feel},fact:e.fact,interp:e.interp,trig:e.trig,care:e.care,needs:[...e.needs]});me.entry=null};bt="修改我的版本"}
       break;
   }
-  return {back,backText:bt,reset:repairReset,confirm:"你們兩個人這次填的內容都會清除，從第一步重新開始。"};
+  const pending=S.cancelReq&&S.cancelReq.by===role;
+  const two=!!S.names[other(role)];
+  return {back,backText:bt,reset:pending?null:repairRequestCancel,resetText:"取消這次修復",
+    confirm:two?"需要兩個人都同意才會取消。取消前，目前填的內容會先存進「回顧」。":"目前填的內容會先存進「回顧」，再從第一步重新開始。"};
 }
 
 /* ---------- screens ---------- */
@@ -615,6 +645,7 @@ function renderInner(){
   if(key!==lastKey){lastKey=key;toTop()}
   renderTop(st);
   ({join,paused,selfPaused,ready,entry,wait,mirror,confirm,reasons,reasonsReveal,agree,final,done})[st.k](st);
+  if(st.k!=="join"&&st.k!=="done"){const bn=cancelBanner()+cancelNoteHtml(); if(bn){app.insertAdjacentHTML("afterbegin",bn);wireCancel()}}
   wireQuick();
   if(st.k!=="join"&&st.k!=="done"&&st.k!=="paused"&&st.k!=="selfPaused"){setNav(repairNav(st));mountNav()}
 }
@@ -1189,20 +1220,20 @@ function rvRepair(h,open,idx){
     :`${h.story?`<div class="rv-story">${esc(h.story)}</div>`:`<p class="hint">還沒有寫下這次的經過。</p>`}<button type="button" class="linkbtn" data-se="${idx}">${h.story?"修改經過":"寫下經過"}</button>`;
   const hasEntry=h.entry&&(h.entry.a||h.entry.b);
   return `<details class="rv-item"${open||ed?" open":""}><summary>
-    <span class="rv-sum"><strong>${esc(h.date)}${h.cur?`<em class="rv-new">最新</em>`:""}</strong><span>${all.length?esc(all.map(i=>REASONS[i].k).join("、")):"修復的約定"}</span></span></summary>
+    <span class="rv-sum"><strong>${esc(h.date)}${h.cur?`<em class="rv-new">最新</em>`:""}${h.unfinished?`<em class="rv-new rv-unf">未完成</em>`:""}</strong><span>${all.length?esc(all.map(i=>REASONS[i].k).join("、")):(h.unfinished?"沒有完成的修復":"修復的約定")}</span></span></summary>
     <div class="rv-body">
       <h4>事情經過</h4>${story}
-      <h4>我們的約定</h4><div class="rv-agree">${esc(h.text)}</div>
+      ${h.unfinished?`<h4>這次的狀態</h4><p class="hint">這次沒有走完就先停下來了${h.stopAt?`，停在「${esc(h.stopAt)}」`:""}。</p>`:`<h4>我們的約定</h4><div class="rv-agree">${esc(h.text)}</div>`}
       ${all.length?`<h4>這次的原因</h4><div class="rv-tags">${all.map(i=>`<span>${esc(REASONS[i].k)}</span>`).join("")}</div>`:""}
-      <h4>各自的部分</h4><div class="rv-kv">${ag("a")}${ag("b")}</div>
+      ${ag("a")||ag("b")?`<h4>各自的部分</h4><div class="rv-kv">${ag("a")}${ag("b")}</div>`:""}
       ${hasEntry?`<details class="kn-details"><summary>看當時各自寫的版本</summary><div class="rv-kv">${rvEntry(h.entry.a,"a")}${rvEntry(h.entry.b,"b")}</div></details>`:""}
     </div></details>`;
 }
 function review(){
   const k=role+":review"; if(k!==lastKey){lastKey=k;toTop()}
   const L=reviewLists(), tab=view.rvTab||"kt";
-  const tabs=[["kt","溫度測驗"],["kn",NOW_NAME],["rp","修復約定"]];
-  const empty={kt:"還沒有測驗紀錄。兩個人都完成「你是哪一種溫度？」之後，結果會保存在這裡。",kn:"還沒有近況紀錄。兩個人都完成「交換近況」之後，答案會保存在這裡。",rp:"還沒有約定紀錄。完成一次修復、寫下約定之後，會保存在這裡。"}[tab];
+  const tabs=[["kt","溫度測驗"],["kn",NOW_NAME],["rp","修復紀錄"]];
+  const empty={kt:"還沒有測驗紀錄。兩個人都完成「你是哪一種溫度？」之後，結果會保存在這裡。",kn:"還沒有近況紀錄。兩個人都完成「交換近況」之後，答案會保存在這裡。",rp:"還沒有修復紀錄。完成或取消一次修復之後，會保存在這裡。"}[tab];
   const list=L[tab], fn={kt:rvQuiz,kn:rvNow,rp:rvRepair}[tab];
   app.innerHTML=`
   <section class="cv cv-sub">
@@ -1236,10 +1267,11 @@ function hub(){
     <p class="cv-label" style="text-align:left">我們的空間</p>
     <h1 class="cv-title fit">${esc(nm("a"))}${S.names.b?" 和 "+esc(nm("b")):""}</h1>
     ${role==="a"&&!S.names.b?inviteCard():""}
+    ${S.cancelReq&&S.cancelReq.by!==role?cancelBanner():""}${cancelNoteHtml()}
     ${called?`<div class="call-card" role="status"><span class="call-dot" aria-hidden="true"></span><div><strong>${esc(nm(ot))}邀請你一起修復</strong><p class="seg-auto">${esc(nm(ot))}想和你把上次的事慢慢說開。準備好的時候再開始就可以。</p><button type="button" class="btn" id="call-go">開始修復</button></div></div>`:""}
     <div class="hub-list">
       <button type="button" class="hub-item" id="go-know"><div class="cv-icon cool">${ICONS.know}</div><div class="hub-text"><strong class="fit" data-fg="hub">了解</strong><span class="seg-auto">${esc(kText)}</span></div><span class="hub-go">進入</span></button>
-      <button type="button" class="hub-item" id="go-repair"><div class="cv-icon cool">${ICONS.fix}</div><div class="hub-text"><strong class="fit" data-fg="hub">修復</strong><span class="seg-auto">發生爭執後，陪你們慢慢把話說開，一起寫下約定。</span></div><span class="hub-go">${rState}</span></button>
+      <button type="button" class="hub-item" id="go-repair"><div class="cv-icon cool">${ICONS.fix}</div><div class="hub-text"><strong class="fit" data-fg="hub">修復</strong><span class="seg-auto">${repairStarted&&!repairDone?`進行中：${esc(STEPS[Math.max(0,stage(role).step)]||"")}。填過的內容都會自動保存，隨時可以回來繼續。`:"發生爭執後，陪你們慢慢把話說開，一起寫下約定。"}</span></div><span class="hub-go">${rState}</span></button>
       <button type="button" class="hub-item" id="go-review"><div class="cv-icon cool">${ICONS.review}</div><div class="hub-text"><strong class="fit" data-fg="hub">回顧</strong><span class="seg-auto">${esc(reviewLine())}</span></div><span class="hub-go">查看</span></button>
       <div class="hub-item off" aria-disabled="true"><div class="cv-icon warm">${ICONS.warm}</div><div class="hub-text"><strong class="fit" data-fg="hub">升溫</strong><span class="seg-auto">推薦你們能一起體驗的新鮮事。</span></div><span class="hub-go">即將推出</span></div>
       <div class="hub-item off" aria-disabled="true"><div class="cv-icon warm">${ICONS.daily}</div><div class="hub-text"><strong class="fit" data-fg="hub">日常</strong><span class="seg-auto">每週互相說一句感謝。</span></div><span class="hub-go">即將推出</span></div>
@@ -1252,6 +1284,7 @@ function hub(){
     goAct("repair");
   };
   document.getElementById("go-repair").onclick=startRepair;
+  wireCancel();
   const cg=document.getElementById("call-go"); if(cg)cg.onclick=startRepair;
   document.getElementById("go-review").onclick=()=>goAct("review");
 }
@@ -1668,7 +1701,7 @@ function done(){
   document.getElementById("svs").onclick=()=>{S.final.story=st.value.trim();save();svm.textContent="已儲存"};
   const cp=document.getElementById("cp");
   cp.onclick=()=>{try{navigator.clipboard.writeText(text).then(()=>{cp.textContent="已複製"},()=>{cp.textContent="無法複製"})}catch(e){cp.textContent="無法複製"}};
-  document.getElementById("nw").onclick=()=>{S.final.story=st.value.trim();S.rh=S.rh||[];S.rh.push(repairRec());S.call=null;S.a=blankPerson();S.b=blankPerson();S.final={text:"",ok:{a:false,b:false}};save();draft={a:{},b:{}};view={};render();window.scrollTo(0,0)};
+  document.getElementById("nw").onclick=()=>{S.final.story=st.value.trim();S.rh=S.rh||[];S.rh.push(repairRec());S.call=null;S.cancelReq=null;S.cancelNote=null;S.a=blankPerson();S.b=blankPerson();S.final={text:"",ok:{a:false,b:false}};save();draft={a:{},b:{}};view={};render();window.scrollTo(0,0)};
 }
 
 function wait(st){
