@@ -151,6 +151,16 @@ body.on-cover .card.a,body.on-cover .card.b{background:rgba(255,255,255,.72);col
 .kn-opts{display:grid;gap:10px}
 .kn-opt{font:inherit;font-size:16px;line-height:1.5;text-align:left;padding:16px 18px;border-radius:14px;border:1.5px solid #E2D9CC;background:rgba(255,255,255,.8);color:#2B2F33;cursor:pointer;min-height:56px}
 .kn-opt[aria-pressed="true"]{border-color:#A0541A;background:#FBE6CF;font-weight:500}
+.call-card{display:flex;gap:12px;align-items:flex-start;margin:0 0 14px;padding:16px;border-radius:16px;background:#FFF1E2;border:1px solid #F1CFAA}
+.call-card strong{display:block;font-size:16px;color:#7A3F12;margin-bottom:4px}
+.call-card p{margin:0 0 12px;font-size:14px;line-height:1.7;color:#5E4A3A}
+.call-card .btn{background:#A0541A;border-color:#A0541A}
+.call-dot{flex:none;width:10px;height:10px;margin-top:7px;border-radius:50%;background:#E07A2E;box-shadow:0 0 0 4px rgba(224,122,46,.18);animation:callpulse 1.8s ease-in-out infinite}
+@keyframes callpulse{50%{box-shadow:0 0 0 8px rgba(224,122,46,.05)}}
+@media (prefers-reduced-motion:reduce){.call-dot{animation:none}}
+.notify-card{display:grid;gap:8px;margin:0 0 16px;padding:14px 16px;border-radius:14px;background:#FFF7EE;border:1px solid #EADFD2}
+.notify-card p{margin:0;font-size:14px;line-height:1.7}
+.notify-card .btn{justify-self:start}
 .navrow{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:4px;min-height:44px}
 .nav-reset{font:inherit;font-size:14px;background:none;border:none;color:#8A6A55;text-decoration:underline;text-underline-offset:3px;cursor:pointer;padding:8px 0;white-space:nowrap}
 .nav-confirm{margin-top:4px;padding:16px;border-radius:14px;background:#FFF7EE;border:1px solid #EADFD2;display:grid;gap:12px}
@@ -524,7 +534,7 @@ function quizReset(){S.q[role]=blankQ1();S.q[role].started=true;draft[role]={};v
 const QUIZ_RESET={reset:quizReset,confirm:"你這次的作答會清除，從第一題重新開始。"};
 function nowReset(){S.qn[role]=blankN1();draft[role].now=null}
 const NOW_RESET={reset:nowReset,confirm:"你這次填的內容會清除，重新作答。"};
-function repairReset(){S.a=blankPerson();S.b=blankPerson();S.final={text:"",ok:{a:false,b:false}};draft={a:{},b:{}}}
+function repairReset(){S.call=null;S.a=blankPerson();S.b=blankPerson();S.final={text:"",ok:{a:false,b:false}};draft={a:{},b:{}}}
 function repairNav(st){
   const me=S[role]; let back=null, bt="上一步";
   switch(st.k){
@@ -1218,13 +1228,15 @@ function hub(){
   const ot=other(role);
   const rp=S[role], repairStarted=!!(rp.reasons||rp.paused);
   const repairDone=S.final&&S.final.ok&&S.final.ok.a&&S.final.ok.b;
-  const rState=repairDone?"查看約定":(repairStarted?"繼續":"開始");
+  const called=!repairDone&&S.call&&S.call.by===ot&&!rp.reasons&&!rp.paused;
+  const rState=repairDone?"查看約定":(called?"對方邀請":(repairStarted?"繼續":"開始"));
   const kText=qstage(role)==="reveal"?`你最近是「${ROLES[roleOf(role).main].n}」・溫度測驗與${NOW_NAME}`:`溫度測驗與${NOW_NAME}，每半年一次，更新對彼此的了解。`;
   app.innerHTML=`
   <section class="cv cv-sub">
     <p class="cv-label" style="text-align:left">我們的空間</p>
     <h1 class="cv-title fit">${esc(nm("a"))}${S.names.b?" 和 "+esc(nm("b")):""}</h1>
     ${role==="a"&&!S.names.b?inviteCard():""}
+    ${called?`<div class="call-card" role="status"><span class="call-dot" aria-hidden="true"></span><div><strong>${esc(nm(ot))}邀請你一起修復</strong><p class="seg-auto">${esc(nm(ot))}想和你把上次的事慢慢說開。準備好的時候再開始就可以。</p><button type="button" class="btn" id="call-go">開始修復</button></div></div>`:""}
     <div class="hub-list">
       <button type="button" class="hub-item" id="go-know"><div class="cv-icon cool">${ICONS.know}</div><div class="hub-text"><strong class="fit" data-fg="hub">了解</strong><span class="seg-auto">${esc(kText)}</span></div><span class="hub-go">進入</span></button>
       <button type="button" class="hub-item" id="go-repair"><div class="cv-icon cool">${ICONS.fix}</div><div class="hub-text"><strong class="fit" data-fg="hub">修復</strong><span class="seg-auto">發生爭執後，陪你們慢慢把話說開，一起寫下約定。</span></div><span class="hub-go">${rState}</span></button>
@@ -1235,7 +1247,12 @@ function hub(){
   </section>`;
   wireInvite();
   document.getElementById("go-know").onclick=()=>goAct("know");
-  document.getElementById("go-repair").onclick=()=>goAct("repair");
+  const startRepair=()=>{
+    if(!repairDone&&!S.call&&!S.a.reasons&&!S.b.reasons&&!S.a.paused&&!S.b.paused){S.call={by:role,at:Date.now()};view.justCalled=true}
+    goAct("repair");
+  };
+  document.getElementById("go-repair").onclick=startRepair;
+  const cg=document.getElementById("call-go"); if(cg)cg.onclick=startRepair;
   document.getElementById("go-review").onclick=()=>goAct("review");
 }
 
@@ -1547,9 +1564,24 @@ function agree(){
     S[role].agree={will:d.will.trim(),hope:d.hope.trim()};save();render()};
 }
 
+
+function notifyText(){return "我想跟你把上次的事慢慢說開，你準備好的時候打開於溫看看："+location.href.split(/[?#]/)[0]}
+function notifyCard(){
+  return `<div class="notify-card"><p class="seg-auto">已經提醒${esc(nm(other(role)))}：打開「我們的空間」就會看到你的邀請。也可以傳一則訊息給對方。</p><button type="button" class="btn ghost" id="notify">傳訊息提醒${esc(nm(other(role)))}</button><span class="hint" id="notify-m" aria-live="polite"></span></div>`;
+}
+function wireNotify(){
+  const b=document.getElementById("notify"); if(!b)return;
+  b.onclick=async()=>{
+    const t=notifyText(), m=document.getElementById("notify-m");
+    try{ if(navigator.share){await navigator.share({text:t});return} await navigator.clipboard.writeText(t); m.textContent="已複製，貼到 LINE 或訊息傳給對方。"}
+    catch(e){ if(e&&e.name==="AbortError")return; m.textContent="無法自動複製，請手動傳訊息給對方。"}
+  };
+}
+
 function reasons(){
   const d=draft[role]; d.rs=d.rs||[];
   app.innerHTML=`
+  ${S.call&&S.call.by===role&&!S[other(role)].reasons&&S.names[other(role)]?notifyCard():""}
   <h1>這次的意見不同，可能跟哪些原因有關？</h1>
   <p class="lead">選 1～3 個你覺得最符合「這一次」的原因。${esc(nm(other(role)))} 也會各自選，兩人都選好後才一起揭曉。</p>
   <div class="hint" id="cnt" aria-live="polite">已選 ${d.rs.length}／3</div>
@@ -1557,6 +1589,7 @@ function reasons(){
   <div id="picked"></div>
   <div class="err" id="er"></div>
   <div class="actions"><button class="btn" type="button" id="go">送出</button></div>`;
+  wireNotify();
   app.querySelectorAll("[data-r]").forEach(b=>b.onclick=()=>{
     const i=+b.dataset.r, k=d.rs.indexOf(i), er=document.getElementById("er");
     if(k>=0)d.rs.splice(k,1);
@@ -1635,7 +1668,7 @@ function done(){
   document.getElementById("svs").onclick=()=>{S.final.story=st.value.trim();save();svm.textContent="已儲存"};
   const cp=document.getElementById("cp");
   cp.onclick=()=>{try{navigator.clipboard.writeText(text).then(()=>{cp.textContent="已複製"},()=>{cp.textContent="無法複製"})}catch(e){cp.textContent="無法複製"}};
-  document.getElementById("nw").onclick=()=>{S.final.story=st.value.trim();S.rh=S.rh||[];S.rh.push(repairRec());S.a=blankPerson();S.b=blankPerson();S.final={text:"",ok:{a:false,b:false}};save();draft={a:{},b:{}};view={};render();window.scrollTo(0,0)};
+  document.getElementById("nw").onclick=()=>{S.final.story=st.value.trim();S.rh=S.rh||[];S.rh.push(repairRec());S.call=null;S.a=blankPerson();S.b=blankPerson();S.final={text:"",ok:{a:false,b:false}};save();draft={a:{},b:{}};view={};render();window.scrollTo(0,0)};
 }
 
 function wait(st){
