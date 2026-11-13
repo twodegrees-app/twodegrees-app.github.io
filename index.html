@@ -191,6 +191,9 @@ body.on-cover .card.a,body.on-cover .card.b{background:rgba(255,255,255,.72);col
 .rv-kv div{padding:10px 12px;background:#FAF7F2;border-radius:10px}
 .rv-kv b{display:block;font-size:12px;color:#5E6670;font-weight:500}
 .rv-body .linkbtn{justify-self:start;margin-top:-6px}
+.rv-jump{display:flex;width:100%;justify-content:space-between;align-items:center;gap:12px;font:inherit;font-size:15px;text-align:left;cursor:pointer;color:inherit}
+.rv-detail{padding-top:12px}
+.rv-detail .rd-head{margin-top:0}
 .rv-story{white-space:pre-wrap;padding:12px 14px;background:#FAF7F2;border-radius:10px;line-height:1.8}
 .rv-agree{font-family:var(--font-display);font-size:17px;white-space:pre-wrap;padding:12px 14px;background:#FFF7EE;border-radius:10px}
 .rv-empty{margin:0;padding:20px 16px;text-align:center;color:#5E6670;background:rgba(255,255,255,.7);border-radius:14px;font-size:14px;line-height:1.7}
@@ -776,8 +779,8 @@ const ROLE_COPY={"stove": {"motto": "把你照顧好，就是我說愛的方式�
 function roleArt(k,size){return `<svg width="${size}" height="${size}" viewBox="0 0 80 80" aria-hidden="true">${ROLE_ART[k]}</svg>`}
 function roleIcon(k,size){size=size||44;const t=ROLE_LOOK[k].tint;
   return `<span class="r-ico" style="width:${size}px;height:${size}px;background:${t}">${roleArt(k,Math.round(size*0.74))}</span>`}
-function roleDetail(r){
-  const R=roleOf(r), k=R.main, m=ROLES[k], d=ROLE_COPY[k], L=ROLE_LOOK[k], s=R.second?ROLES[R.second]:null;
+function roleDetail(r,k0){
+  const R=k0?{main:k0,second:null}:roleOf(r), k=R.main, m=ROLES[k], d=ROLE_COPY[k], L=ROLE_LOOK[k], s=R.second?ROLES[R.second]:null;
   const box=(title,items,cool)=>`<div class="rd-box"><h2 class="${cool?"cool":""}" style="${cool?"":`background:${L.tint};color:${L.ink}`}">${title}</h2><ul>${items.map(x=>`<li>${esc(x)}</li>`).join("")}</ul></div>`;
   return `
     <div class="rd-head">
@@ -1072,7 +1075,7 @@ function qReveal(){
       <ul class="kn-acts">${acts.map(a=>`<li>${esc(a)}</li>`).join("")}</ul>
     </div>
     ${nextBox(S.q.date)}
-    ${hist.length?`<div class="kn-card"><h3 style="margin:0">過去的紀錄</h3><ul class="kn-hist">${hist.map(h=>`<li><strong>${esc(h.date)}</strong><span>${esc(nm("a"))}：${ROLES[h.roles.a].n}・${esc(nm("b"))}：${ROLES[h.roles.b].n}</span>${histMsgs(h)}</li>`).join("")}</ul></div>`:""}
+    <button type="button" class="kn-card rv-jump" data-rv="kt"><span>所有的測驗結果都保存在「回顧」</span><span class="hub-go">查看</span></button>
     ${shareBtns(share)}
     <button type="button" class="cv-link" id="again">開始新的一次（原型可以直接開始，正式版會在半年後開放）</button>
   </section>`;
@@ -1140,7 +1143,7 @@ function nReveal(){
     <div class="kn-card"><dl class="kn-now">${rows}</dl></div>
     ${msgBox(S.qn,me,ot,["原來你最近喜歡這個，下次帶你去","我想陪你做你想做的事","你最近辛苦了","看完覺得更懂你了"])}
     ${nextBox(S.qn.date)}
-    ${hist.length?`<div class="kn-card"><h3 style="margin:0">過去的紀錄</h3><ul class="kn-hist">${hist.map(h=>`<li><strong>${esc(h.date)}</strong><details><summary>當時的近況</summary>${["a","b"].map(r=>`<p><b>${esc(nm(r))}</b>${NOW.filter(f=>h.now[r][f.k]).map(f=>esc(f.q.replace(/^最近/,""))+"："+esc(h.now[r][f.k])).join("、")}</p>`).join("")}</details>${histMsgs(h)}</li>`).join("")}</ul></div>`:""}
+    <button type="button" class="kn-card rv-jump" data-rv="kn"><span>所有的近況紀錄都保存在「回顧」</span><span class="hub-go">查看</span></button>
     ${shareBtns("")}
     <button type="button" class="cv-link" id="again">開始新的一次（原型可以直接開始，正式版會在半年後開放）</button>
   </section>`;
@@ -1154,6 +1157,9 @@ function nReveal(){
 
 /* ---------- 回顧 ---------- */
 function quizRecNow(){
+  if(quizDone(role)&&!(S.names.b&&quizDone("a")&&quizDone("b"))){
+    const r=role; return {date:S.q.date||today(),roles:{[r]:roleOf(r).main},partial:true,cur:true};
+  }
   if(!(S.names.b&&quizDone("a")&&quizDone("b")))return null;
   return {date:S.q.date||today(),roles:{a:roleOf("a").main,b:roleOf("b").main},self:{a:S.q.a.self,b:S.q.b.self},
     guess:{a:S.q.a.guessRole,b:S.q.b.guessRole},msg:{a:S.q.a.msg||"",b:S.q.b.msg||""},cur:true};
@@ -1191,9 +1197,11 @@ function rvQuiz(h,open){
   const ans=h.self&&h.self.a&&h.self.b?QS.map((Q,i)=>{const x=h.self.a[i],y=h.self.b[i];if(x==null||y==null)return "";const eq=x===y;
     return `<li class="${eq?"ok":""}"><strong>${esc(Q.q)}</strong>${eq?`<span class="kn-same">兩人都選：${esc(Q.o[x][1])}</span>`:`<span><b>${esc(nm("a"))}</b>${esc(Q.o[x][1])}</span><span><b>${esc(nm("b"))}</b>${esc(Q.o[y][1])}</span>`}</li>`}).join(""):"";
   return `<details class="rv-item"${open?" open":""}><summary>
-    <span class="rv-icons">${roleIcon(h.roles.a,34)}${roleIcon(h.roles.b,34)}</span>
-    <span class="rv-sum"><strong>${esc(h.date)}${h.cur?`<em class="rv-new">最新</em>`:""}</strong><span>${esc(nm("a"))}：${ROLES[h.roles.a].n}</span><span>${esc(nm("b"))}：${ROLES[h.roles.b].n}</span></span></summary>
+    <span class="rv-icons">${["a","b"].filter(r=>h.roles[r]).map(r=>roleIcon(h.roles[r],34)).join("")}</span>
+    <span class="rv-sum"><strong>${esc(h.date)}${h.cur?`<em class="rv-new">最新</em>`:""}</strong>${["a","b"].map(r=>`<span>${esc(nm(r))}：${h.roles[r]?ROLES[h.roles[r]].n:"還沒完成"}</span>`).join("")}</span></summary>
     <div class="rv-body">
+      ${h.partial?`<p class="hint">${esc(nm(other(role)))}完成測驗後，這裡會出現兩個人的對照結果。</p>`:""}
+      ${["a","b"].filter(r=>h.roles[r]).map(r=>`<details class="kn-details rv-full"><summary>${r===role?"我的完整結果":esc(nm(r))+"的完整結果"}（${ROLES[h.roles[r]].n}）</summary><div class="rv-detail">${roleDetail(r,h.roles[r])}</div></details>`).join("")}
       ${same!=null?`<p>有 <strong>${same}</strong> 題兩個人選了一樣的答案。</p>`:""}
       ${g.a||g.b?`<h4>猜猜看</h4><div class="rv-kv">${gLine("a")}${gLine("b")}</div>`:""}
       ${rvMsgs(h)}
@@ -1255,6 +1263,10 @@ function review(){
 
 /* ---------- 我們的空間（首頁） ---------- */
 function goAct(a){S.act[role]=a;save();view={};render()}
+document.addEventListener("toggle",e=>{if(e.target.open)fitText(e.target)},true);
+document.addEventListener("click",e=>{
+  const j=e.target.closest&&e.target.closest("[data-rv]"); if(j){S.act[role]="review";save();view={rvTab:j.dataset.rv};render();return}
+});
 function hub(){
   const ot=other(role);
   const rp=S[role], repairStarted=!!(rp.reasons||rp.paused);
