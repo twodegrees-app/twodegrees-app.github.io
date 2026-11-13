@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>於溫｜關於兩個人的溫度</title>
+<meta name="description" content="於溫 Two Degrees：關於兩個人的溫度。意見不同時，陪你們找回溫度；平常，幫你們留住溫度。">
 <link rel="icon" href="favicon.ico" sizes="any">
 <link rel="icon" type="image/png" sizes="64x64" href="favicon-64.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -13,8 +14,6 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="於溫">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-
-<meta name="description" content="於溫 Two Degrees：關於兩個人的溫度。意見不同時，陪你們找回溫度；平常，幫你們留住溫度。">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@400;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
@@ -59,7 +58,7 @@ body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-siz
 .wrap{max-width:680px;margin:0 auto;padding:0 16px 64px}
 header.top{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line)}
 .top-inner{max-width:680px;margin:0 auto;padding:10px 16px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
-.brand{font-family:var(--font-display);font-size:20px;white-space:nowrap;font-weight:700;display:flex;align-items:center;gap:8px}
+.brand{font-family:var(--font-display);font-size:20px;font-weight:700;display:flex;align-items:center;gap:8px}
 .brand-logo{height:24px;width:auto;display:block}
 .hero{display:grid;justify-items:start;gap:4px;margin:28px 0 8px}
 .hero-logo{width:150px;height:auto;display:block;margin-bottom:6px}
@@ -446,6 +445,7 @@ function stage(r){
   if(me.safety==="flag") return {k:"resources",step:0};
   if(me.safety==="unsure") return {k:"unsure",step:0};
   if(me.safety==="trigger"&&!me.triggerAck) return {k:"triggerNote",step:0};
+  if(S.names[other(r)]&&(ot.safety==="flag"||ot.paused)) return {k:"paused",step:0};
   if(!me.reasons) return {k:"reasons",step:1};
   if(!ot.reasons) return {k:"wait",step:1,msg:"等 "+nm(other(r))+" 也選好，兩人都選好後才會一起揭曉。"};
   if(!me.reasonsSeen) return {k:"reasonsReveal",step:1};
@@ -526,7 +526,7 @@ function repairNav(st){
   const unSafe=()=>{me.safety=null;me.triggerAck=false};
   switch(st.k){
     case "safety": back=()=>{S.act[role]="hub"}; bt="返回"; break;
-    case "unsure": case "triggerNote": case "reasons": back=unSafe; break;
+    case "unsure": case "triggerNote": case "reasons": back=()=>{unSafe();me.paused=false}; break;
     case "ready": back=()=>{me.reasonsSeen=false}; break;
     case "entry": back=()=>{me.ready=null}; break;
     case "wait":
@@ -594,9 +594,9 @@ function renderInner(){
   const key=role+":"+st.k+":"+st.step;
   if(key!==lastKey){lastKey=key;toTop()}
   renderTop(st);
-  ({join,safety,resources,unsure,triggerNote,ready,entry,wait,mirror,confirm,reasons,reasonsReveal,agree,final,done})[st.k](st);
+  ({join,safety,resources,unsure,paused,triggerNote,ready,entry,wait,mirror,confirm,reasons,reasonsReveal,agree,final,done})[st.k](st);
   wireQuick();
-  if(st.k!=="join"&&st.k!=="done"){setNav(repairNav(st));mountNav()}
+  if(st.k!=="join"&&st.k!=="done"&&st.k!=="paused"){setNav(repairNav(st));mountNav()}
 }
 
 /* ---------- 了解：這半年的我們 ---------- */
@@ -1359,15 +1359,44 @@ function wireYN(d,after){app.querySelectorAll("[data-yn]").forEach(b=>b.onclick=
 function unsure(){
   app.innerHTML=`
   <h1>先確認你的感受</h1>
-  <p class="lead">你的答案不會讓 ${esc(nm(other(role)))} 知道。如果你對自己的安全有一點不確定，可以先和專業的人聊聊，再決定要不要繼續。</p>
+  <p class="lead seg-auto">你的答案不會讓${esc(nm(other(role)))}知道。如果你對自己的安全有一點不確定，可以先和專業的人聊聊，再決定要不要繼續。</p>
   <div class="card warn"><div class="res">
     <div><span>安心專線（24 小時）</span><strong>1925</strong></div>
     <div><span>保護專線（24 小時）</span><strong>113</strong></div>
     <div><span>立即有危險</span><strong>110</strong></div></div></div>
   <div class="actions"><button class="btn" type="button" id="go">我覺得可以，繼續</button><button class="btn ghost" type="button" id="stop">我想先停下來</button></div>
-  <p class="hint" id="msg"></p>`;
+  `;
+  if(S[role].paused){
+    app.innerHTML=`
+    <h1>這次先暫停</h1>
+    <p class="lead seg-auto">好的，你隨時可以回來。${esc(nm(other(role)))}的畫面只會顯示「這次先暫停」，不會看到任何原因。</p>
+    <div class="card warn"><div class="res">
+      <div><span>安心專線（24 小時）</span><strong>1925</strong></div>
+      <div><span>保護專線（24 小時）</span><strong>113</strong></div>
+      <div><span>立即有危險</span><strong>110</strong></div></div></div>
+    <div class="actions"><button class="btn" type="button" id="resume">我準備好了，繼續</button></div>`;
+    document.getElementById("resume").onclick=()=>{S[role].paused=false;save();render()};
+    return;
+  }
   document.getElementById("go").onclick=()=>{S[role].safety="ok";save();render()};
-  document.getElementById("stop").onclick=()=>{document.getElementById("msg").textContent="好的，你隨時可以回來。對方畫面上只會顯示「還在等待」。"};
+  document.getElementById("stop").onclick=()=>{S[role].paused=true;save();render()};
+}
+
+function paused(){
+  const o=nm(other(role));
+  app.innerHTML=`
+  <div class="card wait"><div class="breathe" aria-hidden="true"></div>
+  <h2 style="margin-top:4px">這次先暫停</h2>
+  <p class="seg-auto" style="margin:0">${esc(o)}目前還沒辦法繼續這次的對話。</p></div>
+  <p class="lead seg-auto">每個人都可以在準備好之前先停下來。為了讓兩個人都能安心回答，這裡不會顯示原因。</p>
+  <div class="card">
+    <p class="seg-auto" style="margin:0">這段時間，先照顧好自己的心情。</p>
+    <p class="hint seg-auto" style="margin:0">如果你也覺得難受，可以打 1925 安心專線（24 小時）。</p>
+    <p class="hint seg-auto" style="margin:0">等${esc(o)}準備好，這個畫面會自動更新。</p>
+  </div>
+  <div class="actions"><button class="btn" type="button" id="tohub2">回到我們的空間</button></div>
+  <p class="demo-note">原型示範：點上方的「${esc(o)}」切換成對方的視角。</p>`;
+  document.getElementById("tohub2").onclick=()=>goAct("hub");
 }
 
 function triggerNote(){
@@ -1385,15 +1414,15 @@ function triggerNote(){
 function resources(){
   app.innerHTML=`
   <h1>謝謝你願意說出來</h1>
-  <p class="lead">你的答案不會讓 ${esc(nm(other(role)))} 知道。當關係裡有害怕或控制，先照顧自己的安全，比「好好溝通」更重要。這時候比較適合找專業的人一起想辦法。</p>
+  <p class="lead seg-auto">你的答案不會讓${esc(nm(other(role)))}知道。當關係裡有害怕或控制，先照顧自己的安全，比「好好溝通」更重要。這時候比較適合找專業的人一起想辦法。</p>
   <div class="card warn"><div class="res">
     <div><span>保護專線（24 小時）</span><strong>113</strong></div>
     <div><span>安心專線（24 小時）</span><strong>1925</strong></div>
     <div><span>立即有危險</span><strong>110</strong></div></div>
-    <div class="hint">對方畫面上只會顯示「還在等待」，不會看到任何原因。</div>
+    <div class="hint">對方畫面只會顯示「這次先暫停」，不會看到任何原因。</div>
   </div>
   <div class="actions"><button class="btn ghost" type="button" id="back">我想重新回答</button></div>`;
-  document.getElementById("back").onclick=()=>{S[role].safety=null;draft[role]={};save();render()};
+  document.getElementById("back").onclick=()=>{S[role].safety=null;S[role].paused=false;draft[role]={};save();render()};
 }
 
 function ready(){
