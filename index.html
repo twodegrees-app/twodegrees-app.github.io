@@ -194,6 +194,13 @@ body.on-cover .card.a,body.on-cover .card.b{background:rgba(255,255,255,.72);col
 .rv-jump{display:flex;width:100%;justify-content:space-between;align-items:center;gap:12px;font:inherit;font-size:15px;text-align:left;cursor:pointer;color:inherit}
 .rv-detail{padding-top:12px}
 .rv-detail .rd-head{margin-top:0}
+.kn-done{flex-wrap:wrap;cursor:default}
+.kn-done .kn-pill{border:none;font:inherit;font-size:14px;font-weight:700;cursor:pointer}
+.kn-redo{flex-basis:100%;display:grid;gap:10px;padding-top:4px}
+.kn-redo[hidden]{display:none}
+.kn-redo .btn{background:#A0541A;border-color:#A0541A;color:#fff}
+.kn-redo .btn.ghost{background:transparent;color:#A0541A}
+.kn-redo p{margin:0;font-size:14px;line-height:1.7}
 .rv-story{white-space:pre-wrap;padding:12px 14px;background:#FAF7F2;border-radius:10px;line-height:1.8}
 .rv-agree{font-family:var(--font-display);font-size:17px;white-space:pre-wrap;padding:12px 14px;background:#FFF7EE;border-radius:10px}
 .rv-empty{margin:0;padding:20px 16px;text-align:center;color:#5E6670;background:rgba(255,255,255,.7);border-radius:14px;font-size:14px;line-height:1.7}
@@ -875,28 +882,53 @@ function know(){
   const tSt=qstage(role), nSt=nstage(role);
   const label=(st,started,first)=>st==="reveal"?"看結果":(st==="wait"?"等待對方":(started?"繼續":first));
   const tDone=tSt==="reveal", nDoneBoth=nSt==="reveal";
-  const tLine=tDone?`你是「${ROLES[roleOf(role).main].n}」・${esc(nm(ot))} 是「${ROLES[roleOf(ot).main].n}」`:"";
   const nLine=nDoneBoth?"已經交換這半年的近況":(nSt==="wait"?"等對方也完成後就能交換":"請謹慎選擇，結果無法更改");
   app.innerHTML=`
   <section class="cv cv-sub">
     <h1 class="cv-title fit">認識彼此</h1>
     <p class="cv-desc" style="text-align:left;margin:-10px 0 0">即使很熟悉，也可能會看到不一樣的他／她</p>
     <div class="kn-menu">
-      <button type="button" class="kn-menu-item" id="go-kt">
+      ${tDone?doneItem("kt",roleIcon("stove",40),"你是哪一種溫度？",addMonths(S.q.date||today(),6)):`<button type="button" class="kn-menu-item" id="go-kt">
         <span class="kn-menu-icon">${roleIcon("stove",40)}</span>
-        <span class="kn-menu-text"><strong class="fit" data-fg="menu">你是哪一種溫度？</strong>${tLine?`<span>${tLine}</span>`:""}${tDone?`<em>下次更新 ${esc(addMonths(S.q.date||today(),6))}</em>`:""}</span>
+        <span class="kn-menu-text"><strong class="fit" data-fg="menu">你是哪一種溫度？</strong></span>
         <span class="kn-pill">${label(tSt,S.q[role].started,"開始測驗")}</span>
-      </button>
-      <button type="button" class="kn-menu-item" id="go-kn">
+      </button>`}
+      ${nDoneBoth?doneItem("kn",roleIcon("tea",40),NOW_NAME,addMonths(S.qn.date||today(),6)):`<button type="button" class="kn-menu-item" id="go-kn">
         <span class="kn-menu-icon">${roleIcon("tea",40)}</span>
-        <span class="kn-menu-text"><strong class="fit" data-fg="menu">${NOW_NAME}</strong><span class="${nDoneBoth||nSt==="wait"?"":"kn-warn"}">${nLine}</span>${nDoneBoth?`<em>下次更新 ${esc(addMonths(S.qn.date||today(),6))}</em>`:""}</span>
+        <span class="kn-menu-text"><strong class="fit" data-fg="menu">${NOW_NAME}</strong><span class="${nSt==="wait"?"":"kn-warn"}">${nLine}</span></span>
         <span class="kn-pill">${label(nSt,false,"開始作答")}</span>
-      </button>
+      </button>`}
     </div>
   </section>`;
-  document.getElementById("go-kt").onclick=()=>goAct("kt");
-  document.getElementById("go-kn").onclick=()=>goAct("kn");
+  const g=id=>document.getElementById(id);
+  if(g("go-kt"))g("go-kt").onclick=()=>goAct("kt");
+  if(g("go-kn"))g("go-kn").onclick=()=>goAct("kn");
+  app.querySelectorAll("[data-redo]").forEach(b=>b.onclick=()=>{
+    const k=b.dataset.redo, box=app.querySelector(`[data-redo-box="${k}"]`);
+    box.innerHTML=`<p class="seg-auto">目前的結果會保存在「回顧」，兩個人都要重新作答。</p><div class="actions" style="margin:0"><button type="button" class="btn" data-redo-yes="${k}">確定重新填</button><button type="button" class="btn ghost" data-redo-no="1">先不要</button></div>`;
+    box.hidden=false; b.hidden=true; segLines(); fitText(box);
+    box.querySelector("[data-redo-yes]").onclick=()=>{if(k==="kt"){archiveQuiz();S.q=blankQuiz()}else{archiveNow();S.qn=blankNow()}draft={a:{},b:{}};save();view={};lastKey="";render()};
+    box.querySelector("[data-redo-no]").onclick=()=>render();
+  });
 }
+function doneItem(k,icon,title,next){
+  return `<div class="kn-menu-item kn-done">
+    <span class="kn-menu-icon">${icon}</span>
+    <span class="kn-menu-text"><strong class="fit" data-fg="menu">${title}</strong><em>下次更新 ${esc(next)}</em></span>
+    <button type="button" class="kn-pill" data-redo="${k}">我們要重新填</button>
+    <div class="kn-redo" data-redo-box="${k}" hidden></div>
+  </div>`;
+}
+
+function archiveQuiz(){
+  const ra=roleOf("a").main, rb=roleOf("b").main;
+    S.qh=S.qh||[];
+    S.qh.push({date:S.q.date||today(),roles:{a:ra,b:rb},self:{a:S.q.a.self.slice(),b:S.q.b.self.slice()},v:{a:{items:S.q.a.vItems,v:S.q.a.v,decoy:S.q.a.vDecoy,pr:S.q.a.pr||{},level:(verdictOf("a")||{}).level},b:{items:S.q.b.vItems,v:S.q.b.v,decoy:S.q.b.vDecoy,pr:S.q.b.pr||{},level:(verdictOf("b")||{}).level}},msg:{a:S.q.a.msg||"",b:S.q.b.msg||""},guess:{a:S.q.a.guessRole,b:S.q.b.guessRole}});
+    S.q=blankQuiz();draft={a:{},b:{}};}
+function archiveNow(){
+    S.qnh=S.qnh||[];
+    S.qnh.push({date:S.qn.date||today(),now:{a:{...S.qn.a.now},b:{...S.qn.b.now}},msg:{a:S.qn.a.msg||"",b:S.qn.b.msg||""}});
+    S.qn=blankNow();draft={a:{},b:{}};}
 
 /* ---------- 你是哪一種溫度？ ---------- */
 function qstage(r){
@@ -1081,10 +1113,7 @@ function qReveal(){
   </section>`;
   wireShare(share); wireMsg(S.q,me); wirePr(me);
   app.querySelectorAll("[data-detail]").forEach(b=>b.onclick=()=>{view.detail=b.dataset.detail;render()});
-  document.getElementById("again").onclick=()=>{
-    S.qh=S.qh||[];
-    S.qh.push({date:S.q.date||today(),roles:{a:ra,b:rb},self:{a:S.q.a.self.slice(),b:S.q.b.self.slice()},v:{a:{items:S.q.a.vItems,v:S.q.a.v,decoy:S.q.a.vDecoy,pr:S.q.a.pr||{},level:(verdictOf("a")||{}).level},b:{items:S.q.b.vItems,v:S.q.b.v,decoy:S.q.b.vDecoy,pr:S.q.b.pr||{},level:(verdictOf("b")||{}).level}},msg:{a:S.q.a.msg||"",b:S.q.b.msg||""},guess:{a:S.q.a.guessRole,b:S.q.b.guessRole}});
-    S.q=blankQuiz();draft={a:{},b:{}};save();view={};render()};
+  document.getElementById("again").onclick=()=>{archiveQuiz();save();view={};render()};
 }
 
 /* ---------- 交換近況 ---------- */
@@ -1148,10 +1177,7 @@ function nReveal(){
     <button type="button" class="cv-link" id="again">開始新的一次（原型可以直接開始，正式版會在半年後開放）</button>
   </section>`;
   wireShare(""); wireMsg(S.qn,me);
-  document.getElementById("again").onclick=()=>{
-    S.qnh=S.qnh||[];
-    S.qnh.push({date:S.qn.date||today(),now:{a:{...S.qn.a.now},b:{...S.qn.b.now}},msg:{a:S.qn.a.msg||"",b:S.qn.b.msg||""}});
-    S.qn=blankNow();draft={a:{},b:{}};save();view={};render()};
+  document.getElementById("again").onclick=()=>{archiveNow();save();view={};render()};
 }
 
 
