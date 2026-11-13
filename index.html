@@ -50,7 +50,9 @@
 *{box-sizing:border-box}
 /* line-break rule: Chinese breaks only at punctuation/spaces; a run longer than the line may still break so nothing overflows */
 body,button,input,textarea{word-break:keep-all;overflow-wrap:anywhere;line-break:strict}
-.fit-seg .seg{display:block;white-space:nowrap}
+.fit-seg .seg{display:inline;white-space:nowrap}
+.kn-q.fit-seg .seg{display:block}
+.fit-seg .seg.wrap{white-space:normal}
 .fit-seg.fit{white-space:normal;overflow:visible}
 .fit{white-space:nowrap;overflow:hidden;text-overflow:clip;display:block;max-width:100%}
 html,body{margin:0}
@@ -543,8 +545,16 @@ function fitText(root){
     el.style.fontSize="";
     const base=parseFloat(getComputedStyle(el).fontSize)||16, min=Math.max(10,Math.round(base*0.62));
     let size=base, guard=40;
-    const wide=()=>[...el.children].some(c=>c.scrollWidth>el.clientWidth+1);
-    while(wide()&&size>min&&guard--){size-=1;el.style.fontSize=size+"px"}
+    const segs=[...el.children];
+    segs.forEach(c=>c.classList.remove("wrap"));
+    const wide=()=>segs.some(c=>c.getBoundingClientRect().width>el.clientWidth+1);
+    if(el.matches("h1, h2, .kn-q, .rt2, .fit")){
+      while(wide()&&size>min&&guard--){size-=1;el.style.fontSize=size+"px"}
+    }else{
+      const bmin=Math.round(base*0.9);
+      while(wide()&&size>bmin&&guard--){size-=1;el.style.fontSize=size+"px"}
+      segs.forEach(c=>{if(c.getBoundingClientRect().width>el.clientWidth+1)c.classList.add("wrap")});
+    }
   });
   (root||document).querySelectorAll(".fit").forEach(el=>{
     el.style.fontSize="";
@@ -568,7 +578,7 @@ function toTop(){
 function render(){renderInner();segLines();fitText()}
 /* 題目排版：一段話放同一行，遇到標點就換行；某一段太長時整個標題一起縮小 */
 function segLines(){
-  app.querySelectorAll("h1, .kn-q, .seg-auto").forEach(el=>{
+  app.querySelectorAll("h1, h2, .kn-q, .seg-auto, p.lead, p.hint, div.hint, .cv-desc, .demo-note, label.q, div.q, .nav-confirm p").forEach(el=>{
     if(el.dataset.seg||el.children.length) return;
     const t=el.textContent.trim(); if(!/[，。；：？！]/.test(t.slice(0,-1))&&!el.matches(".kn-q, .seg-auto")) return;
     const parts=t.match(/[^，。；：？！]+[，。；：？！」』）]*|[，。；：？！」』）]+/g)||[t];
@@ -1503,7 +1513,7 @@ function agree(){
   const willOpts=[...new Set([...picked.map(i=>REASONS[i].will),...Q.will])];
   app.innerHTML=`
   <h1>你們都被理解了</h1>
-  <p class="lead">接下來想想：下次遇到類似的情況，你願意怎麼做。越具體越好，例如「當我覺得被忽略時，我會直接說『我需要你陪我 10 分鐘』，而不是自己默默忍著」。</p>
+  <p class="lead">下次遇到類似的情況，你願意怎麼做？越具體越好，例如「覺得被忽略時，直接說『陪我十分鐘』，不默默忍著」。</p>
   <div class="card">
     <div><label class="q" for="will">下次遇到類似的情況，我願意試著……</label>${quick("will",willOpts)}<textarea id="will">${esc(d.will||"")}</textarea></div>
     <div><label class="q" for="hope">我希望你可以……</label>${quick("hope",reasonOpts("hope",picked))}<textarea id="hope">${esc(d.hope||"")}</textarea></div>
