@@ -86,7 +86,7 @@ p.lead{color:var(--muted);margin:0 0 20px}
 label.q{font-weight:500;display:block;margin-bottom:6px}
 .hint{font-size:13px;color:var(--muted)}
 input[type=text],textarea{width:100%;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px 12px}
-textarea{min-height:84px;resize:vertical}
+textarea{min-height:104px;resize:vertical}
 input:focus-visible,textarea:focus-visible,button:focus-visible{outline:2px solid var(--me,var(--a));outline-offset:2px}
 .chips{display:flex;flex-wrap:wrap;gap:8px}
 .chip{font:inherit;font-size:14px;padding:6px 12px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
@@ -161,6 +161,7 @@ body.on-cover .card.a,body.on-cover .card.b{background:rgba(255,255,255,.72);col
 .notify-card{display:grid;gap:8px;margin:0 0 16px;padding:14px 16px;border-radius:14px;background:#FFF7EE;border:1px solid #EADFD2}
 .notify-card p{margin:0;font-size:14px;line-height:1.7}
 .notify-card .btn{justify-self:start}
+textarea::placeholder{color:#8C8F94;line-height:1.7}
 .navrow{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:4px;min-height:44px}
 .nav-reset{font:inherit;font-size:14px;background:none;border:none;color:#8A6A55;text-decoration:underline;text-underline-offset:3px;cursor:pointer;padding:8px 0;white-space:nowrap}
 .nav-confirm{margin-top:4px;padding:16px;border-radius:14px;background:#FFF7EE;border:1px solid #EADFD2;display:grid;gap:12px}
@@ -843,7 +844,7 @@ function msgBox(store,me,ot,chips){
   return `<div class="kn-card">
       <h3 style="margin:0">想對 ${esc(nm(ot))} 說的話</h3>
       ${myMsg!=null?`<div class="kn-msg mine"><b>你寫給 ${esc(nm(ot))}</b><p>${myMsg?esc(myMsg):"（沒有留言）"}</p></div><button type="button" class="cv-link" id="editmsg" style="justify-self:start;padding:0">修改</button>`
-        :`${quick("msg",chips)}<textarea id="msg" placeholder="看完彼此的答案，有什麼想說的嗎？">${esc(draft[me].msg||"")}</textarea><div class="actions"><button type="button" class="cv-primary" id="savemsg" style="height:48px">儲存留言</button></div>`}
+        :`${quick("msg",chips)}<textarea id="msg" placeholder="為什麼問：說說看完的感受，對方會知道你有認真看。">${esc(draft[me].msg||"")}</textarea><div class="actions"><button type="button" class="cv-primary" id="savemsg" style="height:48px">儲存留言</button></div>`}
       <div class="kn-msg"><b>${esc(nm(ot))} 寫給你</b><p>${otMsg==null?`${esc(nm(ot))} 還沒留言`:(otMsg?esc(otMsg):"（沒有留言）")}</p></div>
     </div>`;
 }
@@ -1505,10 +1506,10 @@ function entry(){
     <div><div class="q" id="f-l">那時候，你感受到了什麼？</div><div class="hint">可以選好幾個，再點數字標出強度。<br>1 是輕微，5 是很強烈。</div>${S[role].fearLoss?`<div class="hint">你提到擔心關係會結束，可以看看「害怕」「孤單」是不是也在你的感受裡。</div>`:""}
       <div class="chips" role="group" aria-labelledby="f-l" style="margin-top:8px">${FEELINGS.map(f=>`<button type="button" class="chip" data-f="${f}" aria-pressed="${f in d.feel}">${f}</button>`).join("")}</div>
       <div id="levels" style="display:grid;gap:8px;margin-top:10px"></div></div>
-    <div><label class="q" for="fact">你看到、聽到了什麼？</label><div class="hint">只寫事實，像攝影機拍到的那樣。例如「你回家後一直看手機」。</div>${quick("fact",reasonOpts("fact",S[role].reasons||[]))}<textarea id="fact">${esc(d.fact||"")}</textarea></div>
-    <div><label class="q" for="interp">你當時怎麼解讀這件事？</label><div class="hint">例如「我以為你不在乎我說的話」。</div>${quick("interp",reasonOpts("interp",S[role].reasons||[]))}<textarea id="interp">${esc(d.interp||"")}</textarea></div>
-    <div><label class="q" for="trig">這件事有沒有讓你想起過去的某種經驗或感覺？（選填）</label>${S[role].safety==="trigger"?`<div class="hint">如果你願意，可以讓對方知道你的舊傷被碰到了，這能幫對方理解你當時的反應。</div>`:""}${quick("trig")}<textarea id="trig">${esc(d.trig||"")}</textarea></div>
-    <div><label class="q" for="care">在這件事裡，你最在意的是什麼？</label>${quick("care",reasonOpts("care",S[role].reasons||[]))}<textarea id="care">${esc(d.care||"")}</textarea></div>
+    <div><label class="q" for="fact">你看到、聽到了什麼？</label><div class="hint">只寫事實，像攝影機拍到的那樣。例如「你回家後一直看手機」。</div>${quick("fact",reasonOpts("fact",S[role].reasons||[]))}<textarea id="fact" placeholder="為什麼問：把發生的事和自己的解讀分開，對方比較不會覺得被指責。">${esc(d.fact||"")}</textarea></div>
+    <div><label class="q" for="interp">你當時怎麼解讀這件事？</label><div class="hint">例如「我以為你不在乎我說的話」。</div>${quick("interp",reasonOpts("interp",S[role].reasons||[]))}<textarea id="interp" placeholder="為什麼問：同一件事，每個人的解讀不同。說出來，對方才知道你是怎麼想的。">${esc(d.interp||"")}</textarea></div>
+    <div><label class="q" for="trig">這件事有沒有讓你想起過去的某種經驗或感覺？（選填）</label>${S[role].safety==="trigger"?`<div class="hint">如果你願意，可以讓對方知道你的舊傷被碰到了，這能幫對方理解你當時的反應。</div>`:""}${quick("trig")}<textarea id="trig" placeholder="為什麼問：反應特別大時，常是碰到了過去的經驗。說出來，對方比較能體諒。">${esc(d.trig||"")}</textarea></div>
+    <div><label class="q" for="care">在這件事裡，你最在意的是什麼？</label>${quick("care",reasonOpts("care",S[role].reasons||[]))}<textarea id="care" placeholder="為什麼問：吵的常是表面的事。說出真正在意的，才能談到重點。">${esc(d.care||"")}</textarea></div>
     <div><div class="q" id="n-l">你那時候最需要的是什麼？</div>
       <div class="chips" role="group" aria-labelledby="n-l">${NEEDS.map(n=>`<button type="button" class="chip" data-n="${n}" aria-pressed="${d.needs.includes(n)}">${n}</button>`).join("")}</div></div>
     <div class="err" id="er"></div>
@@ -1571,9 +1572,9 @@ function mirror(){
     <div><div class="q" id="mn-l">${esc(o)}需要的</div><div class="chips" role="group" aria-labelledby="mn-l">${oe.needs.map(n=>chip("needs",n,n)).join("")}</div></div>
     <div><label class="q" for="heard">你要告訴${esc(o)}的理解</label>
       <div class="hint">會依照你點的內容自動組成，也可以自己修改。</div>
-      <textarea id="heard" style="min-height:128px" placeholder="點上面的選項，這裡會自動出現一句話。">${esc(d.heard)}</textarea>
+      <textarea id="heard" style="min-height:128px" placeholder="為什麼問：用你的話說出理解，對方才能確認你真的懂。點上面的選項，這裡會自動組成一句。">${esc(d.heard)}</textarea>
       <button type="button" class="linkbtn" id="regen" ${d.hEdit?"":"hidden"}>依照選項重新組一次</button></div>
-    <div><label class="q" for="valid">想跟${esc(o)}說的一句話（選填）</label>${quick("valid")}<textarea id="valid" style="min-height:72px" placeholder="不寫也可以">${esc(d.valid)}</textarea></div>
+    <div><label class="q" for="valid">想跟${esc(o)}說的一句話（選填）</label>${quick("valid")}<textarea id="valid" style="min-height:72px" placeholder="為什麼問：一句認同，能讓對方覺得被接住。不寫也可以。">${esc(d.valid)}</textarea></div>
     <div class="err" id="er"></div>
     <div class="actions"><button class="btn" type="button" id="go">送出我的理解</button></div>
   </div>
@@ -1605,7 +1606,7 @@ function confirm(){
     ${m.emp?`<div><dt>我想你那時候可能覺得</dt><dd>${esc(m.emp)}</dd></div>`:""}</dl></div>
   <div class="card">
     <div class="actions"><button class="btn" type="button" id="yes">對，你懂我</button><button class="btn ghost" type="button" id="more">有一點不一樣，我想補充</button></div>
-    <div id="mb" ${d.more?"":"hidden"}><label class="q" for="mt">你希望對方多理解的是……</label>${quick("mt",Q.more)}<textarea id="mt">${esc(d.mt||"")}</textarea>
+    <div id="mb" ${d.more?"":"hidden"}><label class="q" for="mt">你希望對方多理解的是……</label>${quick("mt",Q.more)}<textarea id="mt" placeholder="為什麼問：理解還差一點時補充一下，對方可以再說一次。">${esc(d.mt||"")}</textarea>
       <div class="err" id="er"></div><div class="actions"><button class="btn" type="button" id="send">送出補充</button></div></div>
   </div>`;
   document.getElementById("yes").onclick=()=>{S[role].confirm="yes";save();render()};
@@ -1625,8 +1626,8 @@ function agree(){
   <h1>你們都被理解了</h1>
   <p class="lead">下次遇到類似的情況，你願意怎麼做？越具體越好，例如「覺得被忽略時，直接說『陪我十分鐘』，不默默忍著」。</p>
   <div class="card">
-    <div><label class="q" for="will">下次遇到類似的情況，我願意試著……</label>${quick("will",willOpts)}<textarea id="will">${esc(d.will||"")}</textarea></div>
-    <div><label class="q" for="hope">我希望你可以……</label>${quick("hope",reasonOpts("hope",picked))}<textarea id="hope">${esc(d.hope||"")}</textarea></div>
+    <div><label class="q" for="will">下次遇到類似的情況，我願意試著……</label>${quick("will",willOpts)}<textarea id="will" placeholder="為什麼問：從自己做得到的開始，比要求對方改變更容易做到。">${esc(d.will||"")}</textarea></div>
+    <div><label class="q" for="hope">我希望你可以……</label>${quick("hope",reasonOpts("hope",picked))}<textarea id="hope" placeholder="為什麼問：具體說出希望，對方才知道怎麼做，不用猜。">${esc(d.hope||"")}</textarea></div>
     <div class="err" id="er"></div>
     <div class="actions"><button class="btn" type="button" id="go">送出</button></div>
   </div>`;
@@ -1704,7 +1705,7 @@ function final(){
   <p class="lead">把兩人的想法整理成一個具體做法，寫到「誰、什麼時候、做什麼」。任何一方修改內容後，兩人都要重新按同意。</p>
   <div class="split">${agreeView("a")}${agreeView("b")}</div>
   <div class="card">
-    <div><label class="q" for="ft">我們約定的具體做法</label>${quick("ft")}<textarea id="ft" placeholder="例如：週末計畫要改時，提早一天說，並一起決定替代的時間。">${esc(f.text)}</textarea></div>
+    <div><label class="q" for="ft">我們約定的具體做法</label>${quick("ft")}<textarea id="ft" placeholder="為什麼問：寫成具體的做法，下次才知道怎麼做。例如：週末計畫要改時，提早一天說。">${esc(f.text)}</textarea></div>
     <div class="hint">${f.ok[ot]?esc(nm(ot))+" 已經同意目前的內容。":esc(nm(ot))+" 還沒同意。"}</div>
     <div class="err" id="er"></div>
     <div class="actions"><button class="btn ghost" type="button" id="sv">儲存修改</button><button class="btn" type="button" id="ok" ${f.ok[role]?"disabled":""}>${f.ok[role]?"你已同意":"我同意這個約定"}</button></div>
@@ -1728,7 +1729,7 @@ function done(){
   <div class="card">
     <label class="q" for="story">記下這次的經過（選填）</label>
     <p class="hint">很久以後再打開，也能想起這次發生了什麼。兩個人都可以寫或補充，之後在「回顧」也能修改。</p>
-    <textarea id="story" style="min-height:140px" placeholder="例如：那天晚上約好一起吃飯，後來……">${esc(f.story||"")}</textarea>
+    <textarea id="story" style="min-height:140px" placeholder="為什麼問：很久以後再看，也能想起這次發生了什麼。例如：那天晚上約好一起吃飯，後來……">${esc(f.story||"")}</textarea>
     <div class="actions"><button class="btn ghost" type="button" id="svs">儲存經過</button><span class="hint" id="svm" aria-live="polite"></span></div>
   </div>
   <div class="actions"><button class="btn" type="button" id="cp">複製約定</button><button class="btn ghost" type="button" id="nw">開始新的一次對話</button></div>
