@@ -333,8 +333,10 @@ body.on-cover .quick button.used{background:#FBE6CF;border-color:#A0541A}
 .rpicked span{color:#4A525A}
 .ritem.has-img{display:flex;gap:12px;align-items:flex-start}
 .rthumb{flex:none;width:56px;height:56px;object-fit:contain;border-radius:12px;background:#FFF7EE}
+.part-label{display:flex;align-items:center;gap:8px;margin:28px 0 10px;font-size:15px;font-weight:700;color:var(--ink)}
+.part-label span{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--me,var(--a));color:#fff;font-size:13px;flex:none}
 .quick{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 8px}
-.quick button{font:inherit;font-size:13px;padding:4px 10px;border-radius:999px;border:1px dashed var(--me,var(--a));background:transparent;color:var(--me,var(--a));cursor:pointer}
+.quick button{font:inherit;font-size:13px;padding:4px 10px;border-radius:14px;text-align:left;line-height:1.5;border:1px dashed var(--me,var(--a));background:transparent;color:var(--me,var(--a));cursor:pointer}
 .quick button::before{content:"＋ "}
 .quick button.used{border-style:solid;background:var(--me-soft,var(--a-soft))}
 .filler{border:1px solid var(--me,var(--a));background:var(--me-soft,var(--a-soft));border-radius:10px;padding:12px 14px;display:grid;gap:8px;margin:0 0 8px}
@@ -1429,14 +1431,17 @@ function mirror(){
   const empOpts=[...new Set([...tf,...Q.emp])];
   const note=prev&&prev.revise?`<div class="card ${ot}"><h3>${esc(nm(ot))} 想補充</h3><div style="white-space:pre-wrap">${esc(prev.note)}</div><div class="hint">看完補充後，修改你的複述再送出一次。</div></div>`:"";
   app.innerHTML=`
-  <h1>${prev&&prev.revise?"再複述一次":"讀讀 "+esc(nm(ot))+" 寫的"}</h1>
-  <p class="lead">先不要回應或解釋自己。試著用你的話，說出你聽到對方在意的是什麼。</p>
+  <h1>${prev&&prev.revise?"再複述一次":"讀讀"+esc(nm(ot))+"寫的，再說說你聽到的"}</h1>
+  <p class="lead seg-auto">這一步分成兩個部分。先讀完對方的版本，再用你的話告訴對方你聽到了什麼。</p>
+  <p class="part-label"><span>1</span>先讀${esc(nm(ot))}的版本</p>
   ${entryView(ot)}
   ${note}
+  <p class="part-label"><span>2</span>換你回應${esc(nm(ot))}</p>
+  <p class="lead seg-auto" style="margin-top:-4px">先不要解釋自己，只說出你聽到的。點下面的選項可以直接帶入，也可以自己寫。</p>
   <div class="card">
-    <div><label class="q" for="heard">我聽到你說的是……</label>${quick("heard",heardOpts)}<textarea id="heard">${esc(d.heard)}</textarea></div>
-    <div><label class="q" for="valid">你會這樣覺得是合理的，因為……</label><div class="hint">認可不等於同意。你只是承認：從對方的角度看，這樣想說得通。</div>${quick("valid")}<textarea id="valid">${esc(d.valid)}</textarea></div>
-    <div><label class="q" for="emp">我想你那時候可能覺得……</label>${quick("emp",empOpts)}<textarea id="emp">${esc(d.emp)}</textarea></div>
+    <div><label class="q" for="heard">我聽到你說的是……</label>${quick("heard",heardOpts)}<textarea id="heard" placeholder="用你的話寫下來……">${esc(d.heard)}</textarea></div>
+    <div><label class="q" for="valid">你會這樣覺得是合理的，因為……</label><div class="hint">認可不等於同意。你只是承認：從對方的角度看，這樣想說得通。</div>${quick("valid")}<textarea id="valid" placeholder="用你的話寫下來……">${esc(d.valid)}</textarea></div>
+    <div><label class="q" for="emp">我想你那時候可能覺得……</label>${quick("emp",empOpts)}<textarea id="emp" placeholder="用你的話寫下來……">${esc(d.emp)}</textarea></div>
     <div class="err" id="er"></div>
     <div class="actions"><button class="btn" type="button" id="go">送出複述</button></div>
   </div>
