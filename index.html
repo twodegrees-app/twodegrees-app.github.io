@@ -200,7 +200,7 @@ body.on-cover .card.a,body.on-cover .card.b{background:rgba(255,255,255,.72);col
 .kn-redo[hidden]{display:none}
 .kn-redo .btn{background:#A0541A;border-color:#A0541A;color:#fff}
 .kn-redo .btn.ghost{background:transparent;color:#A0541A}
-.kn-redo .redo-warn{font-weight:700;color:#9A3412}
+.kn-redo .redo-warn{font-weight:600;color:#7A3F12}
 .kn-redo p{margin:0;font-size:14px;line-height:1.7}
 .rv-story{white-space:pre-wrap;padding:12px 14px;background:#FAF7F2;border-radius:10px;line-height:1.8}
 .rv-agree{font-family:var(--font-display);font-size:17px;white-space:pre-wrap;padding:12px 14px;background:#FFF7EE;border-radius:10px}
@@ -906,7 +906,7 @@ function know(){
   if(g("go-kn"))g("go-kn").onclick=()=>goAct("kn");
   app.querySelectorAll("[data-redo]").forEach(b=>b.onclick=()=>{
     const k=b.dataset.redo, box=app.querySelector(`[data-redo-box="${k}"]`);
-    box.innerHTML=`<p class="seg-auto redo-warn">重新作答後，上一次的結果會被刪除，回顧裡也不會保留，而且無法復原。</p><p class="seg-auto">兩個人都要重新作答。</p><div class="actions" style="margin:0"><button type="button" class="btn" data-redo-yes="${k}">刪除並重新填</button><button type="button" class="btn ghost" data-redo-no="1">先不要</button></div>`;
+    box.innerHTML=`<p class="seg-auto redo-warn">重新作答後，新的答案會取代這次的結果。</p><p class="seg-auto">如果想留著這次的結果，可以先截圖保存。兩個人都會一起重新作答。</p><div class="actions" style="margin:0"><button type="button" class="btn" data-redo-yes="${k}">好，重新填</button><button type="button" class="btn ghost" data-redo-no="1">先不要</button></div>`;
     box.hidden=false; b.hidden=true; segLines(); fitText(box);
     box.querySelector("[data-redo-yes]").onclick=()=>{if(k==="kt"){S.q=blankQuiz()}else{S.qn=blankNow()}draft={a:{},b:{}};save();view={};lastKey="";render()};
     box.querySelector("[data-redo-no]").onclick=()=>render();
