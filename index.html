@@ -94,7 +94,7 @@ input:focus-visible,textarea:focus-visible,button:focus-visible{outline:2px soli
 /* cover: matches the 於溫 封面 design (single light theme by design) */
 body.on-cover{background:#FBEADA linear-gradient(180deg,#EDF1F4 0px,#FAF7F2 410px,#FBEADA 980px) no-repeat;min-height:100vh;color:#2B2F33;color-scheme:light}
 body.on-cover .wrap{max-width:430px}
-body.on-cover header.top{background:rgba(237,241,244,.85);border-bottom-color:#E2DBD0;color:#2B2F33}
+body.on-cover header.top{background:#EDF1F4;border-bottom-color:#E2DBD0;color:#2B2F33}
 body.on-cover .pill{background:#E6DED2;color:#2B2F33}
 .cv{display:flex;flex-direction:column;align-items:center;gap:36px;padding:0 8px 48px;color:#2B2F33}
 .cv-top{position:relative;width:100%;box-sizing:border-box;min-height:100vh;min-height:100svh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:44px;padding:56px 0 112px}
@@ -179,6 +179,8 @@ body.on-cover .card.a,body.on-cover .card.b{background:rgba(255,255,255,.72);col
 .rv-kv{display:grid;gap:6px}
 .rv-kv div{padding:10px 12px;background:#FAF7F2;border-radius:10px}
 .rv-kv b{display:block;font-size:12px;color:#5E6670;font-weight:500}
+.rv-body .linkbtn{justify-self:start;margin-top:-6px}
+.rv-story{white-space:pre-wrap;padding:12px 14px;background:#FAF7F2;border-radius:10px;line-height:1.8}
 .rv-agree{font-family:var(--font-display);font-size:17px;white-space:pre-wrap;padding:12px 14px;background:#FFF7EE;border-radius:10px}
 .rv-empty{margin:0;padding:20px 16px;text-align:center;color:#5E6670;background:rgba(255,255,255,.7);border-radius:14px;font-size:14px;line-height:1.7}
 .rv-tags{display:flex;flex-wrap:wrap;gap:6px}
@@ -1120,7 +1122,7 @@ function nowRecNow(){
   return {date:S.qn.date||today(),now:{a:S.qn.a.now,b:S.qn.b.now},msg:{a:S.qn.a.msg||"",b:S.qn.b.msg||""},cur:true};
 }
 function repairRec(){
-  return {date:S.final.date||today(),text:S.final.text,agree:{a:S.a.agree,b:S.b.agree},reasons:{a:S.a.reasons||[],b:S.b.reasons||[]}};
+  return {date:S.final.date||today(),text:S.final.text,story:S.final.story||"",agree:{a:S.a.agree,b:S.b.agree},reasons:{a:S.a.reasons||[],b:S.b.reasons||[]},entry:{a:S.a.entry||null,b:S.b.entry||null}};
 }
 function repairRecNow(){
   if(!(S.final&&S.final.ok&&S.final.ok.a&&S.final.ok.b))return null;
@@ -1163,15 +1165,27 @@ function rvNow(h,open){
     <span class="rv-sum"><strong>${esc(h.date)}${h.cur?`<em class="rv-new">最新</em>`:""}</strong><span>交換了 ${rows.length} 題近況</span></span></summary>
     <div class="rv-body"><div class="rv-kv">${rows.map(f=>`<div><b>${f.q}</b>${["a","b"].map(r=>`${esc(nm(r))}：${h.now[r][f.k]?esc(h.now[r][f.k]):"沒有填"}`).join("<br>")}</div>`).join("")}</div>${rvMsgs(h)}</div></details>`;
 }
-function rvRepair(h,open){
+function rvEntry(e,r){
+  if(!e)return "";
+  const feel=Object.entries(e.feel||{}).sort((x,y)=>y[1]-x[1]).map(([f,n])=>f+" "+n+"/5").join("、");
+  return `<div><b>${esc(nm(r))}</b>${feel?`感受：${esc(feel)}<br>`:""}${e.fact?`看到、聽到的：${esc(e.fact)}<br>`:""}${e.interp?`當時的解讀：${esc(e.interp)}<br>`:""}${e.care?`最在意的：${esc(e.care)}<br>`:""}${e.needs&&e.needs.length?`最需要的：${esc(e.needs.join("、"))}`:""}</div>`;
+}
+function rvRepair(h,open,idx){
   const all=[...new Set([...(h.reasons.a||[]),...(h.reasons.b||[])])];
   const ag=r=>h.agree&&h.agree[r]?`<div><b>${esc(nm(r))}</b>願意：${esc(h.agree[r].will)}<br>希望對方：${esc(h.agree[r].hope)}</div>`:"";
-  return `<details class="rv-item"${open?" open":""}><summary>
+  const ed=view.rvEdit===idx;
+  const story=ed?`<textarea class="rv-story-in" data-si="${idx}" style="min-height:140px" placeholder="例如：那天晚上約好一起吃飯，後來……">${esc(h.story||"")}</textarea>
+      <div class="actions"><button class="btn" type="button" data-ss="${idx}">儲存</button><button class="btn ghost" type="button" data-sc="1">取消</button></div>`
+    :`${h.story?`<div class="rv-story">${esc(h.story)}</div>`:`<p class="hint">還沒有寫下這次的經過。</p>`}<button type="button" class="linkbtn" data-se="${idx}">${h.story?"修改經過":"寫下經過"}</button>`;
+  const hasEntry=h.entry&&(h.entry.a||h.entry.b);
+  return `<details class="rv-item"${open||ed?" open":""}><summary>
     <span class="rv-sum"><strong>${esc(h.date)}${h.cur?`<em class="rv-new">最新</em>`:""}</strong><span>${all.length?esc(all.map(i=>REASONS[i].k).join("、")):"修復的約定"}</span></span></summary>
     <div class="rv-body">
+      <h4>事情經過</h4>${story}
       <h4>我們的約定</h4><div class="rv-agree">${esc(h.text)}</div>
       ${all.length?`<h4>這次的原因</h4><div class="rv-tags">${all.map(i=>`<span>${esc(REASONS[i].k)}</span>`).join("")}</div>`:""}
       <h4>各自的部分</h4><div class="rv-kv">${ag("a")}${ag("b")}</div>
+      ${hasEntry?`<details class="kn-details"><summary>看當時各自寫的版本</summary><div class="rv-kv">${rvEntry(h.entry.a,"a")}${rvEntry(h.entry.b,"b")}</div></details>`:""}
     </div></details>`;
 }
 function review(){
@@ -1185,9 +1199,16 @@ function review(){
     <h1 class="cv-title fit">回顧</h1>
     <p class="cv-desc" style="text-align:left;margin:-10px 0 0">一起走過的紀錄，都留在這裡。</p>
     <div class="rv-tabs" role="tablist" aria-label="紀錄類別">${tabs.map(([id,t])=>`<button type="button" class="rv-tab" role="tab" data-tab="${id}" aria-selected="${tab===id}">${t}${L[id].length?` ${L[id].length}`:""}</button>`).join("")}</div>
-    <div class="rv-list" role="tabpanel">${list.length?list.map((h,i)=>fn(h,i===0)).join(""):`<p class="rv-empty seg-auto">${empty}</p>`}</div>
+    <div class="rv-list" role="tabpanel">${list.length?list.map((h,i)=>fn(h,i===0,i)).join(""):`<p class="rv-empty seg-auto">${empty}</p>`}</div>
   </section>`;
-  app.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{view.rvTab=b.dataset.tab;render()});
+  app.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{view.rvTab=b.dataset.tab;view.rvEdit=null;render()});
+  app.querySelectorAll("[data-se]").forEach(b=>b.onclick=()=>{view.rvEdit=+b.dataset.se;render();const t=app.querySelector(".rv-story-in");if(t)t.focus()});
+  app.querySelectorAll("[data-sc]").forEach(b=>b.onclick=()=>{view.rvEdit=null;render()});
+  app.querySelectorAll("[data-ss]").forEach(b=>b.onclick=()=>{
+    const i=+b.dataset.ss, h=list[i], v=app.querySelector(".rv-story-in").value.trim();
+    if(h.cur) S.final.story=v; else h.story=v;
+    view.rvEdit=null; save(); render();
+  });
   setNav({back:()=>{S.act[role]="hub";view={}},backText:"回到我們的空間"});
 }
 
@@ -1599,13 +1620,22 @@ function done(){
   <p class="lead">你們把話說清楚了，也寫下了具體的做法。過幾天回來看看，約定有沒有做到、需不需要調整。</p>
   <div class="card"><span class="pill">約定日期 ${esc(f.date||S.created)}</span><div style="font-family:var(--font-display);font-size:20px;white-space:pre-wrap">${esc(f.text)}</div></div>
   <div class="split">${agreeView("a")}${agreeView("b")}</div>
+  <div class="card">
+    <label class="q" for="story">記下這次的經過（選填）</label>
+    <p class="hint">很久以後再打開，也能想起這次發生了什麼。兩個人都可以寫或補充，之後在「回顧」也能修改。</p>
+    <textarea id="story" style="min-height:140px" placeholder="例如：那天晚上約好一起吃飯，後來……">${esc(f.story||"")}</textarea>
+    <div class="actions"><button class="btn ghost" type="button" id="svs">儲存經過</button><span class="hint" id="svm" aria-live="polite"></span></div>
+  </div>
   <div class="actions"><button class="btn" type="button" id="cp">複製約定</button><button class="btn ghost" type="button" id="nw">開始新的一次對話</button></div>
   <div class="actions"><button class="btn ghost" type="button" id="hubb">回到我們的空間</button></div>
   <footer>之後的版本會加入：承擔與道歉、3～7 天後的追蹤提醒。</footer>`;
   document.getElementById("hubb").onclick=()=>goAct("hub");
+  const st=document.getElementById("story"), svm=document.getElementById("svm");
+  st.oninput=()=>{svm.textContent=""};
+  document.getElementById("svs").onclick=()=>{S.final.story=st.value.trim();save();svm.textContent="已儲存"};
   const cp=document.getElementById("cp");
   cp.onclick=()=>{try{navigator.clipboard.writeText(text).then(()=>{cp.textContent="已複製"},()=>{cp.textContent="無法複製"})}catch(e){cp.textContent="無法複製"}};
-  document.getElementById("nw").onclick=()=>{S.rh=S.rh||[];S.rh.push(repairRec());S.a=blankPerson();S.b=blankPerson();S.final={text:"",ok:{a:false,b:false}};save();draft={a:{},b:{}};view={};render();window.scrollTo(0,0)};
+  document.getElementById("nw").onclick=()=>{S.final.story=st.value.trim();S.rh=S.rh||[];S.rh.push(repairRec());S.a=blankPerson();S.b=blankPerson();S.final={text:"",ok:{a:false,b:false}};save();draft={a:{},b:{}};view={};render();window.scrollTo(0,0)};
 }
 
 function wait(st){
