@@ -173,6 +173,8 @@ textarea::placeholder{color:#8C8F94;line-height:1.7}
 .hw-write .card{display:grid;gap:18px}
 .wipe{margin-top:28px;text-align:center}
 .wipe .nav-confirm{text-align:left}
+body.cloud .demo-note{display:none}
+.me-chip{display:inline-block;padding:6px 14px;border-radius:999px;background:var(--me);color:#fff;font-size:14px;font-weight:600}
 .navrow{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:4px;min-height:44px}
 .nav-reset{font:inherit;font-size:14px;background:none;border:none;color:#8A6A55;text-decoration:underline;text-underline-offset:3px;cursor:pointer;padding:8px 0;white-space:nowrap}
 .nav-confirm{margin-top:4px;padding:16px;border-radius:14px;background:#FFF7EE;border:1px solid #EADFD2;display:grid;gap:12px}
@@ -457,7 +459,7 @@ const REASONS=[
 ];
 
 async function wipeAll(){try{localStorage.removeItem(KEY)}catch(e){} S=null; draft={a:{},b:{}}; view={}; lastKey="";
-  if(CLOUD){try{await Promise.race([CLOUD.delete(),new Promise(r=>setTimeout(r,4000))])}catch(e){}}
+  if(SH){try{clearTimeout(pushT);await Promise.race([SH.delete(),new Promise(r=>setTimeout(r,4000))])}catch(e){}}
   location.replace(location.href.split(/[?#]/)[0])}
 if(/[?&]reset=1/.test(location.search)){try{localStorage.removeItem(KEY)}catch(e){}; history.replaceState(null,"",location.href.split(/[?#]/)[0]); window.__resetCloud=true}
 let S=load();
@@ -469,33 +471,101 @@ function load(){try{const t=localStorage.getItem(KEY);const x=t?JSON.parse(t):nu
   if(x){if(!x.act)x.act={a:"repair",b:"repair"};if(!x.q||!x.q.a||!("selfDone" in x.q.a))x.q=blankQuiz();if(!x.qh)x.qh=[];if(!x.qn)x.qn=blankNow();if(!x.qnh)x.qnh=[]}
   return x}catch(e){return null}}
 function save(){if(S)S.savedAt=Date.now();try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){} cloudQueue()}
-/* 在 Claude 裡開啟時，另外存一份到雲端，避免 App 關掉後資料不見 */
-let CLOUD=null, cloudBusy=false, cloudNext, cloudTimer=null;
-function cloudQueue(){ if(!CLOUD)return; clearTimeout(cloudTimer); cloudTimer=setTimeout(()=>cloudPush(S?JSON.stringify(S):null),600) }
-function cloudPush(j){
-  cloudNext=j; if(cloudBusy)return; cloudBusy=true;
-  (async()=>{ while(cloudNext!==undefined){ const v=cloudNext; cloudNext=undefined;
-      try{ if(v===null) await CLOUD.delete(); else await CLOUD.set({json:v,at:Date.now()}) }catch(e){} }
-    cloudBusy=false })();
+/* 在 Claude 裡開啟時：兩個人共用同一份雲端資料，各自用自己的帳號登入 */
+let SH=null, SH_ON=false, SH_UID=null, SH_BASE=null, SH_FULL=false;
+let pushT=null, pushing=false, pushAgain=false, pendingR=false;
+function cloudQueue(){ if(!SH_ON)return; clearTimeout(pushT); pushT=setTimeout(cloudPush,500) }
+function same(a,b){return JSON.stringify(a)===JSON.stringify(b)}
+function merge3(b,m,t){
+  if(same(m,b)) return t;
+  if(same(t,b)) return m;
+  if(Array.isArray(m)&&Array.isArray(t)){
+    if(m.length&&t.length&&m.every(x=>x&&x.id)&&t.every(x=>x&&x.id)){
+      const bm=new Map((Array.isArray(b)?b:[]).filter(x=>x&&x.id).map(x=>[x.id,x]));
+      const out=[], seen=new Set();
+      for(const x of t){const y=m.find(z=>z.id===x.id); out.push(y?merge3(bm.get(x.id),y,x):x); seen.add(x.id)}
+      for(const y of m) if(!seen.has(y.id)&&!bm.has(y.id)) out.push(y);
+      return out;
+    }
+    return m;
+  }
+  if(m&&t&&typeof m==="object"&&typeof t==="object"){
+    const o={}, bb=b&&typeof b==="object"?b:{};
+    new Set([...Object.keys(m),...Object.keys(t)]).forEach(k=>{const v=merge3(bb[k],m[k],t[k]); if(v!==undefined)o[k]=v});
+    return o;
+  }
+  return m;
+}
+function setLocal(obj){ try{ if(obj) localStorage.setItem(KEY,JSON.stringify(obj)); else localStorage.removeItem(KEY) }catch(e){} }
+function myRole(){
+  if(!S){SH_FULL=false;return}
+  const m=S.members||(S.members={});
+  if(m.a===SH_UID) role="a";
+  else if(m.b===SH_UID) role="b";
+  else if(!m.a){m.a=SH_UID; role="a"; cloudQueue()}
+  else if(!m.b){m.b=SH_UID; role="b"; S.act=S.act||{}; S.act.b="hub"; cloudQueue()}
+  else {SH_FULL=true; return}
+  SH_FULL=false;
+}
+function renderSoon(){
+  const a=document.activeElement;
+  if(a&&/^(INPUT|TEXTAREA)$/.test(a.tagName)&&app.contains(a)){pendingR=true;return}
+  render();
+}
+document.addEventListener("focusout",()=>{ if(!pendingR)return; setTimeout(()=>{const a=document.activeElement; if(!(a&&/^(INPUT|TEXTAREA)$/.test(a.tagName))){pendingR=false;render()}},0) });
+function applyRemote(json){
+  let r=null; try{r=JSON.parse(json)}catch(e){return}
+  const dirty=pushing||!!pushT;
+  if(dirty&&S&&SH_BASE){ r=merge3(JSON.parse(SH_BASE),S,r) }
+  SH_BASE=json; setLocal(r); S=load()||r; myRole(); renderSoon();
+  if(dirty) cloudQueue();
+}
+async function cloudPush(){
+  pushT=null;
+  if(!SH)return; if(pushing){pushAgain=true;return}
+  pushing=true;
+  try{
+    do{
+      pushAgain=false;
+      if(!S){ await SH.delete(); SH_BASE=null; continue }
+      if(!S.members){S.members={a:SH_UID}}
+      const sn=await SH.get(); const cur=sn&&sn.exists&&sn.data()?sn.data().json:null;
+      let next=S;
+      if(cur&&SH_BASE&&cur!==SH_BASE){ next=merge3(JSON.parse(SH_BASE),S,JSON.parse(cur)) }
+      const j=JSON.stringify(next);
+      if(j===cur){SH_BASE=cur;continue}
+      await SH.set({json:j,at:Date.now()}); SH_BASE=j;
+      if(next!==S){S=next; setLocal(S); renderSoon()}
+    }while(pushAgain);
+  }catch(e){}
+  pushing=false;
 }
 async function cloudInit(){
   try{
     if(!window.claude||typeof window.claude.use!=="function")return;
     const db=await window.claude.use("db"), u=await window.claude.use("user"); if(!db||!u)return;
     const id=await u.id(); if(!id)return;
-    const ref=db.doc("data/users/"+id+"/space");
-    const snap=await Promise.race([ref.get(),new Promise((_,r)=>setTimeout(()=>r(new Error("timeout")),10000))]);
-    CLOUD=ref;
-    if(window.__resetCloud){cloudPush(null);return}
-    const d=snap&&snap.exists?snap.data():null;
-    if(d&&typeof d.json==="string"){
-      let remote=null; try{remote=JSON.parse(d.json)}catch(e){}
-      if(remote&&(!S||(remote.savedAt||0)>(S.savedAt||0))){
-        try{localStorage.setItem(KEY,d.json)}catch(e){}
-        S=load()||remote; role=S.lastRole||role; view={}; lastKey=""; render(); return;
+    const ref=db.doc("shared/space"), priv=db.doc("data/users/"+id+"/space");
+    const to=p=>Promise.race([p,new Promise((_,r)=>setTimeout(()=>r(new Error("timeout")),10000))]);
+    const snap=await to(ref.get());
+    SH=ref; SH_ON=true; SH_UID=id; document.body.classList.add("cloud");
+    if(window.__resetCloud){S=null;setLocal(null);await ref.delete().catch(()=>{});SH_BASE=null}
+    else{
+      const d=snap&&snap.exists?snap.data():null;
+      if(d&&typeof d.json==="string"){ SH_BASE=d.json; setLocal(JSON.parse(d.json)); S=load(); myRole() }
+      else{
+        let p=null; try{const ps=await to(priv.get()); const pd=ps&&ps.exists?ps.data():null; if(pd&&pd.json)p=JSON.parse(pd.json)}catch(e){}
+        if(!S&&p){setLocal(p);S=load()}
+        if(S&&S.members&&S.members.a&&S.members.a!==id){S=null;setLocal(null)}
+        if(S){S.members=S.members||{a:id}; myRole(); await cloudPush()}
       }
     }
-    if(S) cloudPush(JSON.stringify(S));
+    view={}; lastKey=""; render();
+    ref.onSnapshot(sn=>{
+      if(!sn.exists){ if(SH_BASE&&S){SH_BASE=null;S=null;setLocal(null);pre="cover";renderSoon()} return }
+      const d=sn.data(); if(!d||typeof d.json!=="string"||d.json===SH_BASE)return;
+      applyRemote(d.json);
+    },()=>{});
   }catch(e){}
 }
 window.addEventListener("storage",e=>{if(e.key===KEY){S=load();render()}});
@@ -541,29 +611,30 @@ function renderTop(st){
   if(!S){top.innerHTML='<div class="top-inner"><span class="brand"><img src="'+LOGO+'" alt="" class="brand-logo">於溫</span></div>';return}
   if(st.mode){
     top.innerHTML='<div class="top-inner"><span class="brand"><img src="'+LOGO+'" alt="" class="brand-logo">於溫</span>'+
-     '<div class="who"><span>示範視角</span>'+
-     '<button type="button" class="ra" id="ra" aria-pressed="'+(role==="a")+'">'+esc(nm("a"))+'</button>'+
-     '<button type="button" class="rb" id="rb" aria-pressed="'+(role==="b")+'">'+esc(nm("b"))+'</button></div></div>'+
+     whoHtml()+'</div>'+
      (st.mode==="know"||st.mode==="review"||st.mode==="hw"?'<div class="rail-label"><button type="button" class="cv-back" id="tohub">← 回到我們的空間</button></div>':'')+
      (st.mode==="kt"||st.mode==="kn"?'<div class="rail-label"><button type="button" class="cv-back" id="toknow">← 回到了解</button></div>':'');
-    document.getElementById("ra").onclick=()=>switchRole("a");
-    document.getElementById("rb").onclick=()=>switchRole("b");
+    wireWho();
     const th=document.getElementById("tohub"); if(th)th.onclick=()=>goAct("hub");
     const tk=document.getElementById("toknow"); if(tk)tk.onclick=()=>goAct("know");
     return;
   }
   const label=st.step>=0&&st.step<NS?("第 "+(st.step+1)+" 步／共 "+NS+" 步・"+STEPS[st.step]):(st.step===NS?"完成":"加入空間");
   top.innerHTML='<div class="top-inner"><span class="brand"><img src="'+LOGO+'" alt="" class="brand-logo">於溫</span>'+
-   '<div class="who"><span>示範視角</span>'+
-   '<button type="button" class="ra" id="ra" aria-pressed="'+(role==="a")+'">'+esc(nm("a"))+'</button>'+
-   '<button type="button" class="rb" id="rb" aria-pressed="'+(role==="b")+'">'+esc(nm("b"))+'</button></div></div>'+
+   whoHtml()+'</div>'+
    '<div class="rail">'+STEPS.map((_,i)=>'<span class="'+(i<=Math.min(st.step,NS-1)&&st.step>=0?"on":"")+'"></span>').join("")+'</div>'+
    '<div class="rail-label">'+esc(label)+(st.k!=="join"?' ・ <button type="button" class="linkish" id="tohub">回到我們的空間</button>':'')+'</div>';
   {const th=document.getElementById("tohub"); if(th)th.onclick=()=>goAct("hub");}
-  document.getElementById("ra").onclick=()=>switchRole("a");
-  document.getElementById("rb").onclick=()=>switchRole("b");
+  wireWho();
 }
-function switchRole(r){role=r;S.lastRole=r;save();view={};render();window.scrollTo(0,0)}
+function whoHtml(){
+  if(SH_ON) return '<div class="who"><span class="me-chip">'+esc(nm(role))+'</span></div>';
+  return '<div class="who"><span>示範視角</span>'+
+   '<button type="button" class="ra" id="ra" aria-pressed="'+(role==="a")+'">'+esc(nm("a"))+'</button>'+
+   '<button type="button" class="rb" id="rb" aria-pressed="'+(role==="b")+'">'+esc(nm("b"))+'</button></div>';
+}
+function wireWho(){const a=document.getElementById("ra"),b=document.getElementById("rb"); if(a)a.onclick=()=>switchRole("a"); if(b)b.onclick=()=>switchRole("b")}
+function switchRole(r){if(SH_ON)return;role=r;S.lastRole=r;save();view={};render();window.scrollTo(0,0)}
 
 
 /* ---------- 返回／取消重來 ---------- */
@@ -727,6 +798,7 @@ function renderInner(){
   NAV=null;
   document.body.classList.toggle("on-cover",!S||soft);
   if(!S){renderTop({});return landing()}
+  if(SH_ON&&SH_FULL){renderTop({mode:"hub"});app.innerHTML=`<section class="cv cv-sub"><h1 class="cv-title fit">這個空間已經有兩個人了</h1><p class="cv-desc seg-auto" style="text-align:left">${esc(nm("a"))}和${esc(nm("b"))}已經在使用這個空間。每個空間只給兩個人使用。</p></section>`;return}
   if(soft){renderTop({mode:act});
     if(act==="hub"){const k=role+":hub";if(k!==lastKey){lastKey=k;toTop()} hub()}
     else if(act==="know") know(); else if(act==="review") review(); else if(act==="hw") hwAct(); else if(act==="kt") temp(); else nowAct();
@@ -1668,6 +1740,9 @@ function join(){
 }
 
 function inviteCard(){
+  if(SH_ON) return `<div class="card a"><h3>邀請 ${esc(S.hint||"伴侶")} 加入</h3>
+   <p class="seg-auto" style="margin:0">在畫面最上方按「分享」，用${esc(S.hint||"伴侶")}的 email 邀請對方，權限選「編輯者」。</p>
+   <p class="hint seg-auto" style="margin:0">對方登入自己的 Claude 帳號、打開這個頁面，就會自動加入。之後兩個人填的內容會即時同步。</p></div>`;
   const link=location.href.split(/[?#]/)[0]+"?s="+S.id;
   return `<div class="card a"><h3>邀請 ${esc(S.hint||"伴侶")} 加入</h3>
    <div class="linkbox"><code id="lk">${esc(link)}</code><button class="btn ghost" type="button" id="cp">複製連結</button></div>
