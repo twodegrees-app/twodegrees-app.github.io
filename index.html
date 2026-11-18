@@ -50,7 +50,9 @@
 *{box-sizing:border-box}
 /* line-break rule: Chinese breaks only at punctuation/spaces; a run longer than the line may still break so nothing overflows */
 body,button,input,textarea{word-break:keep-all;overflow-wrap:anywhere;line-break:strict}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 html,body{overflow-x:clip;max-width:100%}
+.card,.kn-card,.hub-item{min-width:0;max-width:100%}
 .fit-seg .seg{display:inline;white-space:nowrap}
 .kn-q.fit-seg .seg{display:block}
 .fit-seg .seg.wrap{white-space:normal}
@@ -410,8 +412,8 @@ dl.entry dt{font-size:13px;color:var(--muted)}
 dl.entry dd{margin:0;white-space:pre-wrap}
 .split{display:grid;gap:14px}
 @media (min-width:640px){.split{grid-template-columns:1fr 1fr}}
-.linkbox{display:flex;gap:8px;flex-wrap:wrap}
-.linkbox code{flex:1;min-width:0;overflow-x:auto;white-space:nowrap;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:13px}
+.linkbox{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;max-width:100%}
+.linkbox code{display:block;min-width:0;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:13px}
 .wait{text-align:left;padding:28px 18px}
 .breathe{width:64px;height:64px;border-radius:50%;background:var(--me-soft,var(--a-soft));border:2px solid var(--me,var(--a));margin:8px 0;animation:br 8s ease-in-out infinite}
 @keyframes br{0%,100%{transform:scale(.7)}50%{transform:scale(1)}}
@@ -506,7 +508,7 @@ function renderTop(st){
     top.innerHTML='<div class="top-inner"><span class="brand"><img src="'+LOGO+'" alt="" class="brand-logo">於溫</span>'+
      '<div class="who"><span>示範視角</span>'+
      '<button type="button" class="ra" id="ra" aria-pressed="'+(role==="a")+'">'+esc(nm("a"))+'</button>'+
-     '<button type="button" class="rb" id="rb" aria-pressed="'+(role==="b")+'">'+esc(S.names.b||"伴侶")+'</button></div></div>'+
+     '<button type="button" class="rb" id="rb" aria-pressed="'+(role==="b")+'">'+esc(nm("b"))+'</button></div></div>'+
      (st.mode==="know"||st.mode==="review"||st.mode==="hw"?'<div class="rail-label"><button type="button" class="cv-back" id="tohub">← 回到我們的空間</button></div>':'')+
      (st.mode==="kt"||st.mode==="kn"?'<div class="rail-label"><button type="button" class="cv-back" id="toknow">← 回到了解</button></div>':'');
     document.getElementById("ra").onclick=()=>switchRole("a");
@@ -519,7 +521,7 @@ function renderTop(st){
   top.innerHTML='<div class="top-inner"><span class="brand"><img src="'+LOGO+'" alt="" class="brand-logo">於溫</span>'+
    '<div class="who"><span>示範視角</span>'+
    '<button type="button" class="ra" id="ra" aria-pressed="'+(role==="a")+'">'+esc(nm("a"))+'</button>'+
-   '<button type="button" class="rb" id="rb" aria-pressed="'+(role==="b")+'">'+esc(S.names.b||"伴侶")+'</button></div></div>'+
+   '<button type="button" class="rb" id="rb" aria-pressed="'+(role==="b")+'">'+esc(nm("b"))+'</button></div></div>'+
    '<div class="rail">'+STEPS.map((_,i)=>'<span class="'+(i<=Math.min(st.step,NS-1)&&st.step>=0?"on":"")+'"></span>').join("")+'</div>'+
    '<div class="rail-label">'+esc(label)+(st.k!=="join"?' ・ <button type="button" class="linkish" id="tohub">回到我們的空間</button>':'')+'</div>';
   {const th=document.getElementById("tohub"); if(th)th.onclick=()=>goAct("hub");}
