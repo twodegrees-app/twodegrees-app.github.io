@@ -50,6 +50,7 @@
 *{box-sizing:border-box}
 /* line-break rule: Chinese breaks only at punctuation/spaces; a run longer than the line may still break so nothing overflows */
 body,button,input,textarea{word-break:keep-all;overflow-wrap:anywhere;line-break:strict}
+html,body{overflow-x:clip;max-width:100%}
 .fit-seg .seg{display:inline;white-space:nowrap}
 .kn-q.fit-seg .seg{display:block}
 .fit-seg .seg.wrap{white-space:normal}
@@ -541,7 +542,7 @@ function wireNavRow(o){
   const b=document.getElementById("nav-back"); if(b)b.onclick=()=>{o.back();save();render()};
   const r=document.getElementById("nav-reset"); if(r)r.onclick=()=>{
     const row=document.getElementById("navrow");
-    row.outerHTML=`<div class="nav-confirm" id="navrow" role="alertdialog" aria-labelledby="nc-t"><p id="nc-t"><strong>確定要取消重來嗎？</strong></p><p class="fit-seg">${(o.confirm.match(/[^，。]+[，。]?/g)||[o.confirm]).map(x=>`<span class="seg">${esc(x)}</span>`).join("")}</p><div class="nav-confirm-btns"><button type="button" class="btn" id="nc-yes">確定重來</button><button type="button" class="btn ghost" id="nc-no">先不要</button></div></div>`;
+    row.outerHTML=`<div class="nav-confirm" id="navrow" role="alertdialog" aria-labelledby="nc-t"><p id="nc-t"><strong>確定要取消重來嗎？</strong></p><p class="fit-seg">${(o.confirm.match(/[^，。]+[，。]?/g)||[o.confirm]).map(x=>`<span class="seg">${esc(x)}</span>`).join("\u200B")}</p><div class="nav-confirm-btns"><button type="button" class="btn" id="nc-yes">確定重來</button><button type="button" class="btn ghost" id="nc-no">先不要</button></div></div>`;
     document.getElementById("nc-yes").onclick=()=>{o.reset();save();view={};lastKey="";render()};
     const no=document.getElementById("nc-no");
     fitText(document.getElementById("navrow"));
@@ -677,7 +678,7 @@ function segLines(){
     if(el.dataset.seg||el.children.length) return;
     const t=el.textContent.trim(); if(!/[，。；：？！]/.test(t.slice(0,-1))&&!el.matches(".kn-q, .seg-auto")) return;
     const parts=t.match(/[^，。；：？！]+[，。；：？！」』）]*|[，。；：？！」』）]+/g)||[t];
-    el.innerHTML=parts.map(x=>`<span class="seg">${esc(x)}</span>`).join("");
+    el.innerHTML=parts.map(x=>`<span class="seg">${esc(x)}</span>`).join("\u200B");
     el.dataset.seg="1"; el.classList.add("fit-seg");
   });
 }
@@ -1622,7 +1623,7 @@ function join(){
 }
 
 function inviteCard(){
-  const link="https://（你的網域）/s/"+S.id;
+  const link=location.href.split(/[?#]/)[0]+"?s="+S.id;
   return `<div class="card a"><h3>邀請 ${esc(S.hint||"伴侶")} 加入</h3>
    <div class="linkbox"><code id="lk">${esc(link)}</code><button class="btn ghost" type="button" id="cp">複製連結</button></div>
    <div class="hint">拿到連結的人就能進入這個空間，請只傳給你的伴侶。</div>
@@ -1859,7 +1860,7 @@ function reasons(){
   <h1>這次的意見不同，可能跟哪些原因有關？</h1>
   <p class="lead">選 1～3 個你覺得最符合「這一次」的原因。${esc(nm(other(role)))} 也會各自選，兩人都選好後才一起揭曉。</p>
   <div class="hint" id="cnt" aria-live="polite">已選 ${d.rs.length}／3</div>
-  <div class="rgrid" role="group" aria-label="常見原因">${REASONS.map((x,i)=>`<button type="button" class="rtile" data-r="${i}" aria-pressed="${d.rs.includes(i)}"><span class="rcheck" aria-hidden="true">✓</span><img src="${REASON_IMG[i]}" alt="" class="rimg"><strong class="rk2">${esc(x.k)}</strong><span class="rt2 fit-seg">${x.t.match(/[^，]+，?/g).map(z=>`<span class="seg">${esc(z)}</span>`).join("")}</span></button>`).join("")}</div>
+  <div class="rgrid" role="group" aria-label="常見原因">${REASONS.map((x,i)=>`<button type="button" class="rtile" data-r="${i}" aria-pressed="${d.rs.includes(i)}"><span class="rcheck" aria-hidden="true">✓</span><img src="${REASON_IMG[i]}" alt="" class="rimg"><strong class="rk2">${esc(x.k)}</strong><span class="rt2 fit-seg">${x.t.match(/[^，]+，?/g).map(z=>`<span class="seg">${esc(z)}</span>`).join("\u200B")}</span></button>`).join("")}</div>
   <div id="picked"></div>
   <div class="err" id="er"></div>
   <div class="actions"><button class="btn" type="button" id="go">送出</button></div>`;
