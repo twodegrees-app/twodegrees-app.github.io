@@ -162,6 +162,11 @@ body.on-cover .card.a,body.on-cover .card.b{background:rgba(255,255,255,.72);col
 .notify-card p{margin:0;font-size:14px;line-height:1.7}
 .notify-card .btn{justify-self:start}
 textarea::placeholder{color:#8C8F94;line-height:1.7}
+.hw-h{font-size:15px;margin:18px 0 8px;color:#7A3F12}
+.hw-letter{background:#FFF7EE;border:1px solid #F1DCC4;border-radius:16px;padding:18px 18px 16px;display:grid;gap:8px}
+.hw-letter p{margin:0;font-family:var(--font-display);font-size:17px;line-height:1.9;white-space:pre-wrap}
+.hw-choice{margin:0;font-weight:600;color:#7A3F12}
+.hw-write .card{display:grid;gap:18px}
 .navrow{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:4px;min-height:44px}
 .nav-reset{font:inherit;font-size:14px;background:none;border:none;color:#8A6A55;text-decoration:underline;text-underline-offset:3px;cursor:pointer;padding:8px 0;white-space:nowrap}
 .nav-confirm{margin-top:4px;padding:16px;border-radius:14px;background:#FFF7EE;border:1px solid #EADFD2;display:grid;gap:12px}
@@ -169,8 +174,8 @@ textarea::placeholder{color:#8C8F94;line-height:1.7}
 .nav-confirm-btns{display:flex;gap:10px;flex-wrap:wrap}
 .nav-confirm .btn{border-color:#A0541A;background:#A0541A}
 .nav-confirm .btn.ghost{background:transparent;color:#A0541A}
-.rv-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;background:#F3ECE3;padding:4px;border-radius:12px}
-.rv-tab{font:inherit;font-size:14px;border:none;background:none;padding:10px 2px;border-radius:9px;color:#5E6670;cursor:pointer;white-space:nowrap}
+.rv-tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;background:#F3ECE3;padding:4px;border-radius:12px}
+.rv-tab{font:inherit;font-size:13px;border:none;background:none;padding:10px 2px;border-radius:9px;color:#5E6670;cursor:pointer;white-space:nowrap}
 .rv-tab[aria-selected="true"]{background:#fff;color:#A0541A;font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,.06)}
 .rv-list{display:grid;gap:10px}
 .rv-item{background:rgba(255,255,255,.88);border:1px solid #ECE4D8;border-radius:14px}
@@ -500,7 +505,7 @@ function renderTop(st){
      '<div class="who"><span>示範視角</span>'+
      '<button type="button" class="ra" id="ra" aria-pressed="'+(role==="a")+'">'+esc(nm("a"))+'</button>'+
      '<button type="button" class="rb" id="rb" aria-pressed="'+(role==="b")+'">'+esc(S.names.b||"伴侶")+'</button></div></div>'+
-     (st.mode==="know"||st.mode==="review"?'<div class="rail-label"><button type="button" class="cv-back" id="tohub">← 回到我們的空間</button></div>':'')+
+     (st.mode==="know"||st.mode==="review"||st.mode==="hw"?'<div class="rail-label"><button type="button" class="cv-back" id="tohub">← 回到我們的空間</button></div>':'')+
      (st.mode==="kt"||st.mode==="kn"?'<div class="rail-label"><button type="button" class="cv-back" id="toknow">← 回到了解</button></div>':'');
     document.getElementById("ra").onclick=()=>switchRole("a");
     document.getElementById("rb").onclick=()=>switchRole("b");
@@ -679,13 +684,13 @@ function renderInner(){
   document.documentElement.style.setProperty("--me",role==="a"?"var(--a)":"var(--b)");
   document.documentElement.style.setProperty("--me-soft",role==="a"?"var(--a-soft)":"var(--b-soft)");
   const act=S&&S.names[role]?(S.act[role]||"hub"):null;
-  const soft=act==="hub"||act==="know"||act==="kt"||act==="kn"||act==="review";
+  const soft=act==="hub"||act==="know"||act==="kt"||act==="kn"||act==="review"||act==="hw";
   NAV=null;
   document.body.classList.toggle("on-cover",!S||soft);
   if(!S){renderTop({});return landing()}
   if(soft){renderTop({mode:act});
     if(act==="hub"){const k=role+":hub";if(k!==lastKey){lastKey=k;toTop()} hub()}
-    else if(act==="know") know(); else if(act==="review") review(); else if(act==="kt") temp(); else nowAct();
+    else if(act==="know") know(); else if(act==="review") review(); else if(act==="hw") hwAct(); else if(act==="kt") temp(); else nowAct();
     mountNav(); return}
   const st=stage(role);
   const key=role+":"+st.k+":"+st.step;
@@ -1218,6 +1223,133 @@ function nReveal(){
 }
 
 
+
+/* ---------- 心裡話 ---------- */
+const HW_Q={
+  req:["晚上讓我先睡","給我一點自己的時間","花錢前先跟我商量","不要在家人面前開我玩笑","一起分擔家事：{哪些事}","我說話時，可以看著我"],
+  fear:["讓你難過","讓你覺得我不在乎你","讓你生氣","讓你覺得被批評","我們又吵起來"],
+  why:["不是不愛你，是我最近真的很累","不是你做得不好，是我需要一點喘息","不是不想陪你，是隔天要早起","不是在怪你，是我想讓我們更好"],
+  tog:["想想怎麼安排比較好","找個時間好好聊聊","先試一週，再看看要怎麼調整","也聽聽你的想法"]
+};
+const HW_REPLY=["謝謝你告訴我","我需要想一想","我們找時間聊聊","我懂了，我們一起調整"];
+function hwList(){return S.hw||(S.hw=[])}
+function hwUnread(){return hwList().filter(h=>h.to===role&&!h.readAt)}
+function hwLine(){const u=hwUnread().length;if(u)return `${nm(other(role))}留了 ${u} 段心裡話給你。`;return "有些話很難開口，這裡陪你慢慢說出來。"}
+function hwCompose(d){
+  const ot=nm(other(role)), t=x=>(x||"").trim().replace(/[。！!，,]+$/,"");
+  if(!t(d.req))return "";
+  let m="有件事我想了很久才說出口：我希望"+t(d.req)+"。";
+  if(t(d.fear)) m+="我擔心說出來會"+t(d.fear)+"，";
+  if(t(d.why)) m+=(t(d.fear)?"但":"")+t(d.why)+"。"; else if(t(d.fear)) m=m.replace(/，$/,"。");
+  m+="我很在意"+ot+"的感受"+(t(d.tog)?"，我們可以一起"+t(d.tog)+"嗎？":"。");
+  return m;
+}
+function hwAct(){
+  if(view.hwRead) return hwRead(view.hwRead);
+  if(view.hwWrite) return hwWrite();
+  if(view.hwSent) return hwSent();
+  const k=role+":hw"; if(k!==lastKey){lastKey=k;toTop()}
+  const L=hwList().slice().reverse(), inbox=L.filter(h=>h.to===role), out=L.filter(h=>h.by===role);
+  const item=h=>{const mine=h.by===role;
+    const st=mine?(h.reply?"有回應了":(h.readAt?"已讀":"還沒讀")):(h.readAt?(h.reply?"已回應":"已讀"):"還沒打開");
+    return `<button type="button" class="kn-card rv-jump" data-hw="${h.id}"><span><strong style="display:block">${esc(h.date)}</strong><span class="hint">${mine?"寫給"+esc(nm(h.to)):esc(nm(h.by))+"寫給你"}・${st}</span></span><span class="hub-go">${!mine&&!h.readAt?"打開":"查看"}</span></button>`};
+  app.innerHTML=`<section class="cv cv-sub">
+    <h1 class="cv-title fit">心裡話</h1>
+    <p class="cv-desc seg-auto" style="text-align:left;margin:-10px 0 0">有些話很難開口，怕對方難過，又不想一直悶著。這裡陪你把在乎和請求一起說出來。</p>
+    <button type="button" class="cv-primary" id="hw-new">寫一段心裡話</button>
+    ${inbox.length?`<h2 class="hw-h">${esc(nm(other(role)))}寫給你的</h2><div class="rv-list">${inbox.map(item).join("")}</div>`:""}
+    ${out.length?`<h2 class="hw-h">你寫的</h2><div class="rv-list">${out.map(item).join("")}</div>`:""}
+  </section>`;
+  document.getElementById("hw-new").onclick=()=>{view={hwWrite:true};render()};
+  app.querySelectorAll("[data-hw]").forEach(b=>b.onclick=()=>{view={hwRead:b.dataset.hw};render()});
+  setNav({back:()=>{S.act[role]="hub";view={}},backText:"回到我們的空間"});
+}
+function hwWrite(){
+  const k=role+":hwWrite"; if(k!==lastKey){lastKey=k;toTop()}
+  const d=draft[role].hw||(draft[role].hw={req:"",fear:"",why:"",tog:"",msg:"",edit:false});
+  const ot=nm(other(role));
+  const field=(id,label,hint,ph)=>`<div><label class="q" for="hw-${id}">${label}</label><p class="hint">${hint}</p>${quick("hw-"+id,HW_Q[id])}<textarea id="hw-${id}" placeholder="${ph}">${esc(d[id])}</textarea></div>`;
+  app.innerHTML=`<section class="cv cv-sub hw-write">
+    <h1 class="cv-title fit">寫一段心裡話</h1>
+    <p class="cv-desc seg-auto" style="text-align:left;margin:-10px 0 0">連同你的擔心一起說出來，對方比較能感受到你的在乎。只有第一題必填。</p>
+    <div class="card">
+      ${field("req","1. 你想請"+esc(ot)+"……","說出具體的請求，越具體越容易做到。","為什麼問：具體的請求，對方才知道可以怎麼做。")}
+      ${field("fear","2. 說出來，你擔心會……","把擔心說出來，對方會知道你是在乎才猶豫。","為什麼問：先說出擔心，對方比較不會覺得被指責。")}
+      ${field("why","3. 這不是因為……","讓對方知道這個請求背後真正的原因。","為什麼問：說出真正的原因，可以避免對方往壞的方向想。")}
+      ${field("tog","4. 你們可以一起……","留一點空間，讓對方也能參與決定。","為什麼問：一起決定，比單方面要求更容易做到。")}
+    </div>
+    <div class="card">
+      <label class="q" for="hw-msg">${esc(ot)}會看到的話</label>
+      <p class="hint">會依照上面的內容自動組成，也可以自己修改。</p>
+      <textarea id="hw-msg" style="min-height:150px" placeholder="填完第一題，這裡就會出現一段話。">${esc(d.msg)}</textarea>
+      <button type="button" class="linkbtn" id="hw-regen" ${d.edit?"":"hidden"}>依照上面的內容重新組一次</button>
+      <div class="err" id="hw-er"></div>
+      <div class="actions"><button type="button" class="btn" id="hw-send">送出給${esc(ot)}</button></div>
+    </div>
+  </section>`;
+  wireQuick();
+  const M=document.getElementById("hw-msg"), R=document.getElementById("hw-regen");
+  const upd=()=>{if(!d.edit){d.msg=hwCompose(d);M.value=d.msg}};
+  ["req","fear","why","tog"].forEach(id=>{const el=document.getElementById("hw-"+id);el.addEventListener("input",()=>{d[id]=el.value;upd()})});
+  M.oninput=()=>{d.msg=M.value;d.edit=true;R.hidden=false};
+  R.onclick=()=>{d.edit=false;R.hidden=true;upd()};
+  document.getElementById("hw-send").onclick=()=>{
+    if(!d.req.trim()){document.getElementById("hw-er").textContent="請先寫下第一題：你想請對方做的事。";return}
+    const msg=(d.msg||hwCompose(d)).trim();
+    const id="h"+Date.now().toString(36);
+    hwList().push({id,by:role,to:other(role),date:today(),at:Date.now(),req:d.req.trim(),fear:d.fear.trim(),why:d.why.trim(),tog:d.tog.trim(),text:msg,readAt:null,reply:null});
+    draft[role].hw=null; save(); view={hwSent:id}; render();
+  };
+  setNav({back:()=>{view={}},backText:"返回",reset:()=>{draft[role].hw=null},resetText:"清空重寫",confirm:"這次寫的內容會清空。"});
+}
+function hwSent(){
+  const k=role+":hwSent"; if(k!==lastKey){lastKey=k;toTop()}
+  const ot=nm(other(role));
+  app.innerHTML=`<section class="cv cv-sub">
+    <h1 class="cv-title fit">送出了，謝謝你願意說出來</h1>
+    <p class="cv-desc seg-auto" style="text-align:left;margin:-10px 0 0">${esc(ot)}打開「我們的空間」就會看到。對方可以先不回應，給彼此一點時間。</p>
+    <div class="notify-card"><p class="seg-auto">也可以傳一則訊息，提醒${esc(ot)}去看。</p><button type="button" class="btn ghost" id="notify">傳訊息提醒${esc(ot)}</button><span class="hint" id="notify-m" aria-live="polite"></span></div>
+  </section>`;
+  const b=document.getElementById("notify");
+  b.onclick=async()=>{const t="我寫了一段心裡話給你，準備好的時候打開於溫看看："+location.href.split(/[?#]/)[0], m=document.getElementById("notify-m");
+    try{ if(navigator.share){await navigator.share({text:t});return} await navigator.clipboard.writeText(t); m.textContent="已複製，貼到 LINE 或訊息傳給對方。"}
+    catch(e){ if(e&&e.name==="AbortError")return; m.textContent="無法自動複製，請手動傳訊息給對方。"}};
+  setNav({back:()=>{view={}},backText:"回到心裡話"});
+}
+function hwRead(id){
+  const h=hwList().find(x=>x.id===id); if(!h){view={};return hwAct()}
+  const k=role+":hwRead:"+id; if(k!==lastKey){lastKey=k;toTop()}
+  const mine=h.by===role, from=nm(h.by), to=nm(h.to);
+  if(!mine&&!h.readAt){h.readAt=Date.now();save()}
+  const d=draft[role].hwr||(draft[role].hwr={});
+  const rp=h.reply;
+  const shown=t=>`<div class="card"><h3 style="margin:0">${t}</h3>${rp.choice?`<p class="hw-choice">${raw(rp.choice)}</p>`:""}${rp.text?`<p style="margin:0;white-space:pre-wrap">${raw(rp.text)}</p>`:""}</div>`;
+  const replyBox=mine?(rp?shown(esc(to)+"的回應")
+      :`<p class="hint">${h.readAt?esc(to)+"已經讀過了，還沒有回應。給對方一點時間。":esc(to)+"還沒打開。"}</p>`)
+    :(rp?shown("你的回應")
+      :`<div class="card">
+        <h3 style="margin:0">想回應${esc(from)}嗎？</h3>
+        <p class="hint">可以先選一句，也可以先不回應，想好了再回來。</p>
+        <div class="chips" role="group" aria-label="回應">${HW_REPLY.map(t=>{const v=pz(t);return `<button type="button" class="chip" data-hwc="${esc(v)}" aria-pressed="${d.choice===v}">${esc(v)}</button>`}).join("")}</div>
+        <textarea id="hw-rt" placeholder="為什麼問：說說你讀完的感受，對方會知道你有認真聽。不寫也可以。">${esc(d.text||"")}</textarea>
+        <div class="err" id="hw-rer"></div>
+        <div class="actions"><button type="button" class="btn" id="hw-reply">送出回應</button><button type="button" class="btn ghost" id="hw-later">先不回應</button></div>
+      </div>`);
+  app.innerHTML=`<section class="cv cv-sub">
+    <h1 class="cv-title fit">${mine?"寫給"+esc(to)+"的心裡話":esc(from)+"的心裡話"}</h1>
+    ${mine?"":`<p class="cv-desc seg-auto" style="text-align:left;margin:-10px 0 0">說出這些話，對${esc(from)}來說並不容易。先讀完，不用急著回應。</p>`}
+    <div class="hw-letter"><span class="hint">${esc(h.date)}</span><p>${raw(h.text)}</p></div>
+    ${replyBox}
+  </section>`;
+  app.querySelectorAll("[data-hwc]").forEach(b=>b.onclick=()=>{d.choice=d.choice===b.dataset.hwc?null:b.dataset.hwc;app.querySelectorAll("[data-hwc]").forEach(x=>x.setAttribute("aria-pressed",x.dataset.hwc===d.choice))});
+  const rt=document.getElementById("hw-rt"); if(rt)rt.oninput=()=>{d.text=rt.value};
+  const sr=document.getElementById("hw-reply"); if(sr)sr.onclick=()=>{
+    if(!d.choice&&!(d.text||"").trim()){document.getElementById("hw-rer").textContent="選一句或寫幾句再送出；也可以先不回應。";return}
+    h.reply={choice:d.choice||"",text:(d.text||"").trim(),at:Date.now()}; draft[role].hwr=null; save(); render()};
+  const lt=document.getElementById("hw-later"); if(lt)lt.onclick=()=>{S.act[role]="hub";save();view={};render()};
+  setNav({back:()=>{view={}},backText:"回到心裡話"});
+}
+
 /* ---------- 回顧 ---------- */
 function quizRecNow(){
   if(quizDone(role)&&!(S.names.b&&quizDone("a")&&quizDone("b"))){
@@ -1242,11 +1374,12 @@ function reviewLists(){
   const q=[quizRecNow(),...(S.qh||[]).slice().reverse()].filter(Boolean);
   const n=[nowRecNow(),...(S.qnh||[]).slice().reverse()].filter(Boolean);
   const r=[repairRecNow(),...(S.rh||[]).slice().reverse()].filter(Boolean);
-  return {kt:q,kn:n,rp:r};
+  const hw=hwList().slice().reverse();
+  return {kt:q,kn:n,rp:r,hw};
 }
 function reviewLine(){
-  const L=reviewLists(), total=L.kt.length+L.kn.length+L.rp.length;
-  return total?`已經保存 ${total} 筆紀錄，可以回頭看看。`:"過去的測驗、近況和約定，都會留在這裡。";
+  const L=reviewLists(), total=L.kt.length+L.kn.length+L.rp.length+L.hw.length;
+  return total?`已經保存 ${total} 筆紀錄，可以回頭看看。`:"過去的測驗、近況、約定和心裡話，都會留在這裡。";
 }
 function rvMsgs(h){
   if(!h.msg||!(h.msg.a||h.msg.b))return "";
@@ -1300,12 +1433,18 @@ function rvRepair(h,open,idx){
       ${hasEntry?`<details class="kn-details"><summary>看當時各自寫的版本</summary><div class="rv-kv">${rvEntry(h.entry.a,"a")}${rvEntry(h.entry.b,"b")}</div></details>`:""}
     </div></details>`;
 }
+function rvHw(h,open){
+  const rp=h.reply;
+  return `<details class="rv-item"${open?" open":""}><summary><span class="rv-sum"><strong>${esc(h.date)}</strong><span>${esc(nm(h.by))}寫給${esc(nm(h.to))}・${rp?"有回應":(h.readAt?"已讀":"還沒讀")}</span></span></summary>
+    <div class="rv-body"><div class="rv-story">${raw(h.text)}</div>
+    ${rp?`<h4>${esc(nm(h.to))}的回應</h4><div class="rv-kv"><div>${rp.choice?raw(rp.choice):""}${rp.choice&&rp.text?"<br>":""}${rp.text?raw(rp.text):""}</div></div>`:""}</div></details>`;
+}
 function review(){
   const k=role+":review"; if(k!==lastKey){lastKey=k;toTop()}
   const L=reviewLists(), tab=view.rvTab||"kt";
-  const tabs=[["kt","溫度測驗"],["kn",NOW_NAME],["rp","修復紀錄"]];
-  const empty={kt:"還沒有測驗紀錄。兩個人都完成「你是哪一種溫度？」之後，結果會保存在這裡。",kn:"還沒有近況紀錄。兩個人都完成「交換近況」之後，答案會保存在這裡。",rp:"還沒有修復紀錄。完成或取消一次修復之後，會保存在這裡。"}[tab];
-  const list=L[tab], fn={kt:rvQuiz,kn:rvNow,rp:rvRepair}[tab];
+  const tabs=[["kt","溫度測驗"],["kn",NOW_NAME],["rp","修復紀錄"],["hw","心裡話"]];
+  const empty={kt:"還沒有測驗紀錄。兩個人都完成「你是哪一種溫度？」之後，結果會保存在這裡。",kn:"還沒有近況紀錄。兩個人都完成「交換近況」之後，答案會保存在這裡。",rp:"還沒有修復紀錄。完成或取消一次修復之後，會保存在這裡。",hw:"還沒有心裡話。寫下或收到心裡話之後，會保存在這裡。"}[tab];
+  const list=L[tab], fn={kt:rvQuiz,kn:rvNow,rp:rvRepair,hw:rvHw}[tab];
   app.innerHTML=`
   <section class="cv cv-sub">
     <h1 class="cv-title fit">回顧</h1>
@@ -1343,10 +1482,12 @@ function hub(){
     <h1 class="cv-title fit">${esc(nm("a"))}${S.names.b?" 和 "+esc(nm("b")):""}</h1>
     ${role==="a"&&!S.names.b?inviteCard():""}
     ${S.cancelReq&&S.cancelReq.by!==role?cancelBanner():""}${cancelNoteHtml()}
+    ${hwUnread().length?`<div class="call-card" role="status"><span class="call-dot" aria-hidden="true"></span><div><strong>${esc(nm(other(role)))}有一段想了很久的心裡話想說</strong><p class="seg-auto">準備好的時候再打開就可以。</p><button type="button" class="btn" id="hw-open">準備好了，打開</button></div></div>`:""}
     ${called?`<div class="call-card" role="status"><span class="call-dot" aria-hidden="true"></span><div><strong>${esc(nm(ot))}邀請你一起修復</strong><p class="seg-auto">${esc(nm(ot))}想和你把上次的事慢慢說開。準備好的時候再開始就可以。</p><button type="button" class="btn" id="call-go">開始修復</button></div></div>`:""}
     <div class="hub-list">
       <button type="button" class="hub-item" id="go-know"><div class="cv-icon cool">${ICONS.know}</div><div class="hub-text"><strong class="fit" data-fg="hub">了解</strong><span class="seg-auto">${esc(kText)}</span></div><span class="hub-go">進入</span></button>
       <button type="button" class="hub-item" id="go-repair"><div class="cv-icon cool">${ICONS.fix}</div><div class="hub-text"><strong class="fit" data-fg="hub">修復</strong><span class="seg-auto">${repairStarted&&!repairDone?`進行中：${esc(STEPS[Math.max(0,stage(role).step)]||"")}。填過的內容都會自動保存，隨時可以回來繼續。`:"發生爭執後，陪你們慢慢把話說開，一起寫下約定。"}</span></div><span class="hub-go">${rState}</span></button>
+      <button type="button" class="hub-item" id="go-hw"><div class="cv-icon warm">${ICONS.hw}</div><div class="hub-text"><strong class="fit" data-fg="hub">心裡話</strong><span class="seg-auto">${esc(hwLine())}</span></div><span class="hub-go">${hwUnread().length?"有新的":"寫一段"}</span></button>
       <button type="button" class="hub-item" id="go-review"><div class="cv-icon cool">${ICONS.review}</div><div class="hub-text"><strong class="fit" data-fg="hub">回顧</strong><span class="seg-auto">${esc(reviewLine())}</span></div><span class="hub-go">查看</span></button>
       <div class="hub-item off" aria-disabled="true"><div class="cv-icon warm">${ICONS.warm}</div><div class="hub-text"><strong class="fit" data-fg="hub">升溫</strong><span class="seg-auto">推薦你們能一起體驗的新鮮事。</span></div><span class="hub-go">即將推出</span></div>
       <div class="hub-item off" aria-disabled="true"><div class="cv-icon warm">${ICONS.daily}</div><div class="hub-text"><strong class="fit" data-fg="hub">日常</strong><span class="seg-auto">每週互相說一句感謝。</span></div><span class="hub-go">即將推出</span></div>
@@ -1362,10 +1503,13 @@ function hub(){
   wireCancel();
   const cg=document.getElementById("call-go"); if(cg)cg.onclick=startRepair;
   document.getElementById("go-review").onclick=()=>goAct("review");
+  document.getElementById("go-hw").onclick=()=>goAct("hw");
+  const ho=document.getElementById("hw-open"); if(ho)ho.onclick=()=>{const u=hwUnread()[0];S.act[role]="hw";save();view={hwRead:u.id};render()};
 }
 
 let pre="cover";   // screens before a space exists: cover | create | invite
 const ICONS={
+  hw:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#B4632A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12.5a7.5 7.5 0 0 1-11.2 6.5L4 20l1.1-4.2A7.5 7.5 0 1 1 20 12.5z"></path><path d="M12 15.2s-3-1.8-3-3.8a1.6 1.6 0 0 1 3-.8 1.6 1.6 0 0 1 3 .8c0 2-3 3.8-3 3.8z"></path></svg>',
   review:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3F6E96" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1"></path><path d="M3 4.5v4h4"></path><path d="M12 7.5V12l3 2"></path></svg>',
   fix:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3F6E96" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="8" width="19" height="8" rx="4" transform="rotate(-45 12 12)"></rect><path d="M10.5 10.5h.01M13.5 13.5h.01M13.5 10.5h.01M10.5 13.5h.01"></path></svg>',
   know:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3F6E96" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h11a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2H9l-4 3v-3H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z"></path><path d="M17 9h3a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-1v3l-4-3h-3"></path></svg>',
