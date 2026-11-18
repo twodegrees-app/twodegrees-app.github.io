@@ -166,6 +166,7 @@ textarea::placeholder{color:#8C8F94;line-height:1.7}
 .hw-letter{background:#FFF7EE;border:1px solid #F1DCC4;border-radius:16px;padding:18px 18px 16px;display:grid;gap:8px}
 .hw-letter p{margin:0;font-family:var(--font-display);font-size:17px;line-height:1.9;white-space:pre-wrap}
 .hw-choice{margin:0;font-weight:600;color:#7A3F12}
+.chip[data-hwcat][aria-pressed="true"]{background:#FBE6CF;border-color:#A0541A;color:#7A3F12}
 .hw-write .card{display:grid;gap:18px}
 .navrow{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:4px;min-height:44px}
 .nav-reset{font:inherit;font-size:14px;background:none;border:none;color:#8A6A55;text-decoration:underline;text-underline-offset:3px;cursor:pointer;padding:8px 0;white-space:nowrap}
@@ -464,7 +465,7 @@ window.addEventListener("storage",e=>{if(e.key===KEY){S=load();render()}});
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 function pname(r){return S&&S.names&&S.names[r]?S.names[r]:"你的伴侶"}
 function other(r){return r==="a"?"b":"a"}
-function nm(r){return S&&S.names&&S.names[r]?S.names[r]:(r==="a"?"建立者":"伴侶")}
+function nm(r){return S&&S.names&&S.names[r]?S.names[r]:(r==="a"?"建立者":(S&&S.hint)||"伴侶")}
 function blankPerson(){return {safety:null,ready:null,entry:null,mirror:null,confirm:null,agree:null}}
 function newSpace(nameA,nameB){
   return {id:Math.random().toString(36).slice(2,8),created:new Date().toISOString().slice(0,10),
@@ -1225,12 +1226,28 @@ function nReveal(){
 
 
 /* ---------- 心裡話 ---------- */
-const HW_Q={
-  req:["晚上讓我先睡","給我一點自己的時間","花錢前先跟我商量","不要在家人面前開我玩笑","一起分擔家事：{哪些事}","我說話時，可以看著我"],
-  fear:["讓你難過","讓你覺得我不在乎你","讓你生氣","讓你覺得被批評","我們又吵起來"],
-  why:["不是不愛你，是我最近真的很累","不是你做得不好，是我需要一點喘息","不是不想陪你，是隔天要早起","不是在怪你，是我想讓我們更好"],
-  tog:["想想怎麼安排比較好","找個時間好好聊聊","先試一週，再看看要怎麼調整","也聽聽你的想法"]
+const HW_COMMON={
+  req:[],
+  fear:["讓你難過","讓你覺得自己不被在乎","讓你生氣","我們又吵起來"],
+  why:["不是不愛你，是我想讓我們更好"],
+  tog:["找個時間好好聊聊","先試一週，再看看要怎麼調整","也聽聽你的想法"]
 };
+const HW_CAT=[
+  {k:"sleep",n:"作息與睡眠",req:["晚上讓我先睡","週末讓我睡晚一點","睡前少滑手機，一起放鬆","睡覺時把燈和聲音調小"],fear:["讓你覺得我不想陪伴"],why:["不是不想陪你，是隔天要早起","不是嫌你，是我最近睡不好，很累"],tog:["想想睡前怎麼相處","定一個我們都可以的睡覺時間"]},
+  {k:"space",n:"自己的時間",req:["每週給我一點自己的時間","下班後讓我先安靜一下","讓我偶爾和朋友出去","我的東西，先問過我再動"],fear:["讓你覺得被冷落","讓你以為我想疏遠"],why:["不是不想跟你在一起，是我需要充電","不是在躲你，是安靜一下我會更有力氣"],tog:["安排各自的時間，也安排一起的時間","約好需要空間時怎麼說"]},
+  {k:"chore",n:"家事分工",req:["一起分擔家事：{哪些事}","用完的東西順手收好","我做完家事時，可以說聲謝謝","不要只說哪裡沒做好"],fear:["讓你覺得被指責","讓你覺得我在計較"],why:["不是在計較，是我最近真的有點撐不住","不是你做得不好，是我希望我們更像一個團隊"],tog:["列出家事，一起分配","每週看看要不要調整"]},
+  {k:"money",n:"金錢",req:["花錢前先跟我商量","一起訂每個月的預算","大筆的花費，我們一起決定","讓我有一筆自己可以用的錢"],fear:["讓你覺得被管","讓你覺得不被信任"],why:["不是不信任你，是我對錢會有不安","不是要管你，是想一起為以後做準備"],tog:["一起看看每個月的花費","定一個彼此都安心的方式"]},
+  {k:"family",n:"家人與親戚",req:["回家的次數，我們一起決定","在家人面前，幫我說說話","不要在家人面前開我玩笑","家裡的事，先跟我商量"],fear:["讓你覺得我對家人有意見","讓你夾在中間很為難"],why:["不是不喜歡你的家人，是我有時候會不自在","不是要你選邊，是我希望感覺我們是一起的"],tog:["想想怎麼和家人相處比較舒服","先討論好，再一起跟家人說"]},
+  {k:"close",n:"親密與擁抱",req:["多一點擁抱","睡前抱我一下","我累的時候，親密的事可以晚一點","牽手、靠著我也會讓我很開心"],fear:["讓你以為我變心了","讓你覺得被拒絕"],why:["不是不愛你，是我現在身體或心情比較累","不是你不好，是我很想更靠近"],tog:["說說彼此喜歡的親近方式","找到我們都舒服的節奏"]},
+  {k:"talk",n:"說話方式",req:["生氣時，先不要大聲","說我的時候，先說你的感受","不要拿以前的事來比較","我說話時，可以看著我"],fear:["讓你覺得被批評","讓你覺得我在挑毛病"],why:["不是在挑毛病，是有些話讓我很受傷","不是要你完美，是我想讓我們好好說話"],tog:["約好一個暫停的暗號","想想下次怎麼說比較好"]},
+  {k:"phone",n:"手機與社群",req:["吃飯時先把手機放下","我說話時，先停下手機","分享我們的照片前，先問我","睡前一起放下手機"],fear:["讓你覺得被管","讓你覺得我小題大作"],why:["不是要管你，是我想被多注意一點","不是小題大作，是這會讓我覺得被忽略"],tog:["約好什麼時候不用手機","一起試一週看看感覺"]},
+  {k:"love",n:"陪伴與表達",req:["每天花一點時間好好聊聊","偶爾安排只有我們的約會","多說一點你的感受","記得我說過重要的事"],fear:["讓你覺得壓力很大","讓你覺得自己做得不夠"],why:["不是你做得不夠，是我很想更親近","不是要求你，是我很珍惜我們的時間"],tog:["安排一個固定的約會時間","說說彼此喜歡被愛的方式"]},
+  {k:"future",n:"未來與計畫",req:["聊聊我們對未來的想法","重大的決定，我們一起做","換工作的事，想先跟你商量","生小孩的時間，想再一起想想"],fear:["讓你覺得我想法變了","讓你擔心我們的方向不同"],why:["不是想法變了，是我想好好面對","不是要否定你，是我想我們一起決定"],tog:["找個不趕時間的時候好好聊","各自寫下想法，再一起對照"]},
+  {k:"other",n:"其他",req:["晚上讓我先睡","給我一點自己的時間","花錢前先跟我商量","一起分擔家事：{哪些事}"],fear:[],why:["不是你做得不好，是我需要一點喘息","不是在怪你，是我想讓我們更好"],tog:["想想怎麼安排比較好"]}
+];
+function hwCat(k){return HW_CAT.find(c=>c.k===k)}
+function hwChips(k,f){const c=hwCat(k)||hwCat("other");return [...new Set([...c[f],...HW_COMMON[f]])].slice(0,7)}
+
 const HW_REPLY=["謝謝你告訴我","我需要想一想","我們找時間聊聊","我懂了，我們一起調整"];
 function hwList(){return S.hw||(S.hw=[])}
 function hwUnread(){return hwList().filter(h=>h.to===role&&!h.readAt)}
@@ -1252,7 +1269,7 @@ function hwAct(){
   const L=hwList().slice().reverse(), inbox=L.filter(h=>h.to===role), out=L.filter(h=>h.by===role);
   const item=h=>{const mine=h.by===role;
     const st=mine?(h.reply?"有回應了":(h.readAt?"已讀":"還沒讀")):(h.readAt?(h.reply?"已回應":"已讀"):"還沒打開");
-    return `<button type="button" class="kn-card rv-jump" data-hw="${h.id}"><span><strong style="display:block">${esc(h.date)}</strong><span class="hint">${mine?"寫給"+esc(nm(h.to)):esc(nm(h.by))+"寫給你"}・${st}</span></span><span class="hub-go">${!mine&&!h.readAt?"打開":"查看"}</span></button>`};
+    return `<button type="button" class="kn-card rv-jump" data-hw="${h.id}"><span><strong style="display:block">${esc(h.date)}</strong><span class="hint">${mine?"寫給"+esc(nm(h.to)):esc(nm(h.by))+"寫給你"}${h.cat&&hwCat(h.cat)&&h.cat!=="other"?"・"+hwCat(h.cat).n:""}・${st}</span></span><span class="hub-go">${!mine&&!h.readAt?"打開":"查看"}</span></button>`};
   app.innerHTML=`<section class="cv cv-sub">
     <h1 class="cv-title fit">心裡話</h1>
     <p class="cv-desc seg-auto" style="text-align:left;margin:-10px 0 0">有些話很難開口，怕對方難過，又不想一直悶著。這裡陪你把在乎和請求一起說出來。</p>
@@ -1266,12 +1283,16 @@ function hwAct(){
 }
 function hwWrite(){
   const k=role+":hwWrite"; if(k!==lastKey){lastKey=k;toTop()}
-  const d=draft[role].hw||(draft[role].hw={req:"",fear:"",why:"",tog:"",msg:"",edit:false});
+  const d=draft[role].hw||(draft[role].hw={cat:"",req:"",fear:"",why:"",tog:"",msg:"",edit:false});
   const ot=nm(other(role));
-  const field=(id,label,hint,ph)=>`<div><label class="q" for="hw-${id}">${label}</label><p class="hint">${hint}</p>${quick("hw-"+id,HW_Q[id])}<textarea id="hw-${id}" placeholder="${ph}">${esc(d[id])}</textarea></div>`;
+  const field=(id,label,hint,ph)=>`<div><label class="q" for="hw-${id}">${label}</label><p class="hint">${hint}</p>${quick("hw-"+id,hwChips(d.cat,id))}<textarea id="hw-${id}" placeholder="${ph}">${esc(d[id])}</textarea></div>`;
   app.innerHTML=`<section class="cv cv-sub hw-write">
     <h1 class="cv-title fit">寫一段心裡話</h1>
     <p class="cv-desc seg-auto" style="text-align:left;margin:-10px 0 0">連同你的擔心一起說出來，對方比較能感受到你的在乎。只有第一題必填。</p>
+    <div class="card">
+      <div><div class="q" id="hw-cat-l">0. 這次想說的是哪方面的事？</div><p class="hint">選一個，下面的選項會換成適合的內容。也可以不選。</p>
+        <div class="chips" role="group" aria-labelledby="hw-cat-l">${HW_CAT.map(c=>`<button type="button" class="chip" data-hwcat="${c.k}" aria-pressed="${d.cat===c.k}">${c.n}</button>`).join("")}</div></div>
+    </div>
     <div class="card">
       ${field("req","1. 你想請"+esc(ot)+"……","說出具體的請求，越具體越容易做到。","為什麼問：具體的請求，對方才知道可以怎麼做。")}
       ${field("fear","2. 說出來，你擔心會……","把擔心說出來，對方會知道你是在乎才猶豫。","為什麼問：先說出擔心，對方比較不會覺得被指責。")}
@@ -1287,6 +1308,7 @@ function hwWrite(){
       <div class="actions"><button type="button" class="btn" id="hw-send">送出給${esc(ot)}</button></div>
     </div>
   </section>`;
+  app.querySelectorAll("[data-hwcat]").forEach(b=>b.onclick=()=>{d.cat=d.cat===b.dataset.hwcat?"":b.dataset.hwcat;const y=scrollY;render();scrollTo(0,y)});
   wireQuick();
   const M=document.getElementById("hw-msg"), R=document.getElementById("hw-regen");
   const upd=()=>{if(!d.edit){d.msg=hwCompose(d);M.value=d.msg}};
@@ -1297,7 +1319,7 @@ function hwWrite(){
     if(!d.req.trim()){document.getElementById("hw-er").textContent="請先寫下第一題：你想請對方做的事。";return}
     const msg=(d.msg||hwCompose(d)).trim();
     const id="h"+Date.now().toString(36);
-    hwList().push({id,by:role,to:other(role),date:today(),at:Date.now(),req:d.req.trim(),fear:d.fear.trim(),why:d.why.trim(),tog:d.tog.trim(),text:msg,readAt:null,reply:null});
+    hwList().push({id,by:role,to:other(role),date:today(),at:Date.now(),cat:d.cat||"",req:d.req.trim(),fear:d.fear.trim(),why:d.why.trim(),tog:d.tog.trim(),text:msg,readAt:null,reply:null});
     draft[role].hw=null; save(); view={hwSent:id}; render();
   };
   setNav({back:()=>{view={}},backText:"返回",reset:()=>{draft[role].hw=null},resetText:"清空重寫",confirm:"這次寫的內容會清空。"});
@@ -1338,7 +1360,7 @@ function hwRead(id){
   app.innerHTML=`<section class="cv cv-sub">
     <h1 class="cv-title fit">${mine?"寫給"+esc(to)+"的心裡話":esc(from)+"的心裡話"}</h1>
     ${mine?"":`<p class="cv-desc seg-auto" style="text-align:left;margin:-10px 0 0">說出這些話，對${esc(from)}來說並不容易。先讀完，不用急著回應。</p>`}
-    <div class="hw-letter"><span class="hint">${esc(h.date)}</span><p>${raw(h.text)}</p></div>
+    <div class="hw-letter"><span class="hint">${esc(h.date)}${h.cat&&hwCat(h.cat)&&h.cat!=="other"?"・"+hwCat(h.cat).n:""}</span><p>${raw(h.text)}</p></div>
     ${replyBox}
   </section>`;
   app.querySelectorAll("[data-hwc]").forEach(b=>b.onclick=()=>{d.choice=d.choice===b.dataset.hwc?null:b.dataset.hwc;app.querySelectorAll("[data-hwc]").forEach(x=>x.setAttribute("aria-pressed",x.dataset.hwc===d.choice))});
@@ -1435,7 +1457,7 @@ function rvRepair(h,open,idx){
 }
 function rvHw(h,open){
   const rp=h.reply;
-  return `<details class="rv-item"${open?" open":""}><summary><span class="rv-sum"><strong>${esc(h.date)}</strong><span>${esc(nm(h.by))}寫給${esc(nm(h.to))}・${rp?"有回應":(h.readAt?"已讀":"還沒讀")}</span></span></summary>
+  return `<details class="rv-item"${open?" open":""}><summary><span class="rv-sum"><strong>${esc(h.date)}</strong><span>${esc(nm(h.by))}寫給${esc(nm(h.to))}${h.cat&&hwCat(h.cat)&&h.cat!=="other"?"・"+hwCat(h.cat).n:""}・${rp?"有回應":(h.readAt?"已讀":"還沒讀")}</span></span></summary>
     <div class="rv-body"><div class="rv-story">${raw(h.text)}</div>
     ${rp?`<h4>${esc(nm(h.to))}的回應</h4><div class="rv-kv"><div>${rp.choice?raw(rp.choice):""}${rp.choice&&rp.text?"<br>":""}${rp.text?raw(rp.text):""}</div></div>`:""}</div></details>`;
 }
