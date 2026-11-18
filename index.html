@@ -171,6 +171,8 @@ textarea::placeholder{color:#8C8F94;line-height:1.7}
 .hw-choice{margin:0;font-weight:600;color:#7A3F12}
 .chip[data-hwcat][aria-pressed="true"]{background:#FBE6CF;border-color:#A0541A;color:#7A3F12}
 .hw-write .card{display:grid;gap:18px}
+.wipe{margin-top:28px;text-align:center}
+.wipe .nav-confirm{text-align:left}
 .navrow{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:4px;min-height:44px}
 .nav-reset{font:inherit;font-size:14px;background:none;border:none;color:#8A6A55;text-decoration:underline;text-underline-offset:3px;cursor:pointer;padding:8px 0;white-space:nowrap}
 .nav-confirm{margin-top:4px;padding:16px;border-radius:14px;background:#FFF7EE;border:1px solid #EADFD2;display:grid;gap:12px}
@@ -454,6 +456,8 @@ const REASONS=[
   {k:"情緒勒索",t:"用罪惡感或威脅來控制對方",d:"用責備、罪惡感或威脅，讓對方照自己的意思做。",tip:"把需要直接說出來，而不是用「如果你愛我，就……」來要求。",will:"需要什麼直接說，不用罪惡感要求對方",safety:true}
 ];
 
+function wipeAll(){try{localStorage.removeItem(KEY)}catch(e){} S=null; draft={a:{},b:{}}; view={}; lastKey=""; pre="cover"; location.replace(location.href.split(/[?#]/)[0])}
+if(/[?&]reset=1/.test(location.search)){try{localStorage.removeItem(KEY)}catch(e){}; history.replaceState(null,"",location.href.split(/[?#]/)[0])}
 let S=load();
 let role=S && S.lastRole ? S.lastRole : "a";
 let view={};          // per-render scratch (drafts, local notices)
@@ -1515,10 +1519,18 @@ function hub(){
       <button type="button" class="hub-item" id="go-hw"><div class="cv-icon warm">${ICONS.hw}</div><div class="hub-text"><strong class="fit" data-fg="hub">心裡話</strong><span class="seg-auto">${esc(hwLine())}</span></div><span class="hub-go">${hwUnread().length?"有新的":"寫一段"}</span></button>
       <button type="button" class="hub-item" id="go-review"><div class="cv-icon cool">${ICONS.review}</div><div class="hub-text"><strong class="fit" data-fg="hub">回顧</strong><span class="seg-auto">${esc(reviewLine())}</span></div><span class="hub-go">查看</span></button>
       <div class="hub-item off" aria-disabled="true"><div class="cv-icon warm">${ICONS.warm}</div><div class="hub-text"><strong class="fit" data-fg="hub">升溫</strong><span class="seg-auto">推薦你們能一起體驗的新鮮事。</span></div><span class="hub-go">即將推出</span></div>
-      <div class="hub-item off" aria-disabled="true"><div class="cv-icon warm">${ICONS.daily}</div><div class="hub-text"><strong class="fit" data-fg="hub">日常</strong><span class="seg-auto">每週互相說一句感謝。</span></div><span class="hub-go">即將推出</span></div>
+      <div class="hub-item off" aria-disabled="true" data-last="1"><div class="cv-icon warm">${ICONS.daily}</div><div class="hub-text"><strong class="fit" data-fg="hub">日常</strong><span class="seg-auto">每週互相說一句感謝。</span></div><span class="hub-go">即將推出</span></div>
     </div>
+    <div class="wipe" id="wipe"><button type="button" class="nav-reset" id="wipe-go">清除所有資料，重新開始</button></div>
   </section>`;
   wireInvite();
+  document.getElementById("wipe-go").onclick=()=>{
+    const w=document.getElementById("wipe");
+    w.innerHTML=`<div class="nav-confirm"><p class="seg-auto"><strong>確定要清除嗎？</strong></p><p class="seg-auto">名字、測驗、修復、心裡話和回顧裡的紀錄，都會從這台裝置刪除，而且無法復原。</p><div class="nav-confirm-btns"><button type="button" class="btn" id="wipe-yes">清除並重新開始</button><button type="button" class="btn ghost" id="wipe-no">先不要</button></div></div>`;
+    segLines(); fitText(w);
+    document.getElementById("wipe-yes").onclick=()=>{wipeAll()};
+    document.getElementById("wipe-no").onclick=()=>render();
+  };
   document.getElementById("go-know").onclick=()=>goAct("know");
   const startRepair=()=>{
     if(!repairDone&&!S.call&&!S.a.reasons&&!S.b.reasons&&!S.a.paused&&!S.b.paused){S.call={by:role,at:Date.now()};view.justCalled=true}
