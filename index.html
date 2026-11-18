@@ -456,8 +456,10 @@ const REASONS=[
   {k:"情緒勒索",t:"用罪惡感或威脅來控制對方",d:"用責備、罪惡感或威脅，讓對方照自己的意思做。",tip:"把需要直接說出來，而不是用「如果你愛我，就……」來要求。",will:"需要什麼直接說，不用罪惡感要求對方",safety:true}
 ];
 
-function wipeAll(){try{localStorage.removeItem(KEY)}catch(e){} S=null; draft={a:{},b:{}}; view={}; lastKey=""; pre="cover"; location.replace(location.href.split(/[?#]/)[0])}
-if(/[?&]reset=1/.test(location.search)){try{localStorage.removeItem(KEY)}catch(e){}; history.replaceState(null,"",location.href.split(/[?#]/)[0])}
+async function wipeAll(){try{localStorage.removeItem(KEY)}catch(e){} S=null; draft={a:{},b:{}}; view={}; lastKey="";
+  if(CLOUD){try{await Promise.race([CLOUD.delete(),new Promise(r=>setTimeout(r,4000))])}catch(e){}}
+  location.replace(location.href.split(/[?#]/)[0])}
+if(/[?&]reset=1/.test(location.search)){try{localStorage.removeItem(KEY)}catch(e){}; history.replaceState(null,"",location.href.split(/[?#]/)[0]); window.__resetCloud=true}
 let S=load();
 let role=S && S.lastRole ? S.lastRole : "a";
 let view={};          // per-render scratch (drafts, local notices)
@@ -466,7 +468,36 @@ let draft={a:{},b:{}};
 function load(){try{const t=localStorage.getItem(KEY);const x=t?JSON.parse(t):null;
   if(x){if(!x.act)x.act={a:"repair",b:"repair"};if(!x.q||!x.q.a||!("selfDone" in x.q.a))x.q=blankQuiz();if(!x.qh)x.qh=[];if(!x.qn)x.qn=blankNow();if(!x.qnh)x.qnh=[]}
   return x}catch(e){return null}}
-function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){} }
+function save(){if(S)S.savedAt=Date.now();try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){} cloudQueue()}
+/* 在 Claude 裡開啟時，另外存一份到雲端，避免 App 關掉後資料不見 */
+let CLOUD=null, cloudBusy=false, cloudNext, cloudTimer=null;
+function cloudQueue(){ if(!CLOUD)return; clearTimeout(cloudTimer); cloudTimer=setTimeout(()=>cloudPush(S?JSON.stringify(S):null),600) }
+function cloudPush(j){
+  cloudNext=j; if(cloudBusy)return; cloudBusy=true;
+  (async()=>{ while(cloudNext!==undefined){ const v=cloudNext; cloudNext=undefined;
+      try{ if(v===null) await CLOUD.delete(); else await CLOUD.set({json:v,at:Date.now()}) }catch(e){} }
+    cloudBusy=false })();
+}
+async function cloudInit(){
+  try{
+    if(!window.claude||typeof window.claude.use!=="function")return;
+    const db=await window.claude.use("db"), u=await window.claude.use("user"); if(!db||!u)return;
+    const id=await u.id(); if(!id)return;
+    const ref=db.doc("data/users/"+id+"/space");
+    const snap=await Promise.race([ref.get(),new Promise((_,r)=>setTimeout(()=>r(new Error("timeout")),10000))]);
+    CLOUD=ref;
+    if(window.__resetCloud){cloudPush(null);return}
+    const d=snap&&snap.exists?snap.data():null;
+    if(d&&typeof d.json==="string"){
+      let remote=null; try{remote=JSON.parse(d.json)}catch(e){}
+      if(remote&&(!S||(remote.savedAt||0)>(S.savedAt||0))){
+        try{localStorage.setItem(KEY,d.json)}catch(e){}
+        S=load()||remote; role=S.lastRole||role; view={}; lastKey=""; render(); return;
+      }
+    }
+    if(S) cloudPush(JSON.stringify(S));
+  }catch(e){}
+}
 window.addEventListener("storage",e=>{if(e.key===KEY){S=load();render()}});
 
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
@@ -2098,6 +2129,7 @@ function loadExample(){
 }
 
 render();
+cloudInit();
 })();
 </script>
 </body>
