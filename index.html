@@ -175,6 +175,15 @@ textarea::placeholder{color:#8C8F94;line-height:1.7}
 .wipe .nav-confirm{text-align:left}
 body.cloud .demo-note{display:none}
 .me-chip{display:inline-block;padding:6px 14px;border-radius:999px;background:var(--me);color:#fff;font-size:14px;font-weight:600}
+.tk-steps{display:flex;gap:6px;list-style:none;margin:0 0 14px;padding:0;flex-wrap:wrap}
+.tk-steps li{font-size:12px;padding:3px 10px;border-radius:999px;background:#ECE6DE;color:#6B5E52}
+.tk-steps li.now{background:#FBE6CF;color:#7A3F12;font-weight:600}
+.tk-steps li.done{background:#E3EDE6;color:#3E6B4E}
+.tk-who{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.tk-who li{padding:8px 12px;border-radius:10px;background:#FAF7F2;font-size:14px}
+.tk-who li.on{background:#E3EDE6;color:#2F5A3E;font-weight:600}
+.tk-check{display:flex;gap:8px;align-items:flex-start;font-size:13px;color:#5E6670;margin-top:8px;line-height:1.6}
+.tk-cats{display:grid;gap:8px}
 .navrow{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:4px;min-height:44px}
 .nav-reset{font:inherit;font-size:14px;background:none;border:none;color:#8A6A55;text-decoration:underline;text-underline-offset:3px;cursor:pointer;padding:8px 0;white-space:nowrap}
 .nav-confirm{margin-top:4px;padding:16px;border-radius:14px;background:#FFF7EE;border:1px solid #EADFD2;display:grid;gap:12px}
@@ -612,7 +621,7 @@ function renderTop(st){
   if(st.mode){
     top.innerHTML='<div class="top-inner"><span class="brand"><img src="'+LOGO+'" alt="" class="brand-logo">於溫</span>'+
      whoHtml()+'</div>'+
-     (st.mode==="know"||st.mode==="review"||st.mode==="hw"?'<div class="rail-label"><button type="button" class="cv-back" id="tohub">← 回到我們的空間</button></div>':'')+
+     (st.mode==="know"||st.mode==="review"||st.mode==="hw"||st.mode==="talk"?'<div class="rail-label"><button type="button" class="cv-back" id="tohub">← 回到我們的空間</button></div>':'')+
      (st.mode==="kt"||st.mode==="kn"?'<div class="rail-label"><button type="button" class="cv-back" id="toknow">← 回到了解</button></div>':'');
     wireWho();
     const th=document.getElementById("tohub"); if(th)th.onclick=()=>goAct("hub");
@@ -794,14 +803,14 @@ function renderInner(){
   document.documentElement.style.setProperty("--me",role==="a"?"var(--a)":"var(--b)");
   document.documentElement.style.setProperty("--me-soft",role==="a"?"var(--a-soft)":"var(--b-soft)");
   const act=S&&S.names[role]?(S.act[role]||"hub"):null;
-  const soft=act==="hub"||act==="know"||act==="kt"||act==="kn"||act==="review"||act==="hw";
+  const soft=act==="hub"||act==="know"||act==="kt"||act==="kn"||act==="review"||act==="hw"||act==="talk";
   NAV=null;
   document.body.classList.toggle("on-cover",!S||soft);
   if(!S){renderTop({});return landing()}
   if(SH_ON&&SH_FULL){renderTop({mode:"hub"});app.innerHTML=`<section class="cv cv-sub"><h1 class="cv-title fit">這個空間已經有兩個人了</h1><p class="cv-desc seg-auto" style="text-align:left">${esc(nm("a"))}和${esc(nm("b"))}已經在使用這個空間。每個空間只給兩個人使用。</p></section>`;return}
   if(soft){renderTop({mode:act});
     if(act==="hub"){const k=role+":hub";if(k!==lastKey){lastKey=k;toTop()} hub()}
-    else if(act==="know") know(); else if(act==="review") review(); else if(act==="hw") hwAct(); else if(act==="kt") temp(); else nowAct();
+    else if(act==="know") know(); else if(act==="review") review(); else if(act==="hw") hwAct(); else if(act==="talk") talkAct(); else if(act==="kt") temp(); else nowAct();
     mountNav(); return}
   const st=stage(role);
   const key=role+":"+st.k+":"+st.step;
@@ -1482,6 +1491,133 @@ function hwRead(id){
   setNav({back:()=>{view={}},backText:"回到心裡話"});
 }
 
+
+/* ---------- 談話紀錄 ---------- */
+const TALK_CAT=[["repair","修復紀錄","有爭執，也有約定"],["hw","心裡話","有一方說出難開口的請求"],["chat","一般討論","計畫、分工或深談"]];
+function talkList(){return S.talks||(S.talks=[])}
+function talkGet(id){return talkList().find(t=>t.id===id)}
+function talkStage(t){
+  if(!(t.consent&&t.consent.a&&t.consent.b)) return "consent";
+  if(!t.sent) return "write";
+  if(t.done) return "done";
+  if(!(t.ok&&t.ok.a&&t.ok.b)) return "confirm";
+  return "classify";
+}
+function talkStatus(t){
+  const st=talkStage(t), me=role, ot=other(role);
+  if(st==="consent") return t.consent&&t.consent[me]?`等${nm(ot)}同意`:"需要你同意";
+  if(st==="write") return "整理摘要中";
+  if(st==="confirm") return t.ok&&t.ok[me]?`等${nm(ot)}確認`:"需要你確認";
+  if(st==="classify") return "選擇分類";
+  const c=TALK_CAT.find(x=>x[0]===t.cat); return c?c[1]:"已完成";
+}
+function talkWaiting(){return talkList().filter(t=>{const st=talkStage(t);return (st==="consent"&&!(t.consent&&t.consent[role]))||(st==="confirm"&&!(t.ok&&t.ok[role]))})}
+function talkLine(){const w=talkWaiting().length;return w?`有 ${w} 段談話需要你回應。`:"談完之後，把重點整理下來，兩個人一起確認。"}
+function talkAct(){
+  if(view.talk) return talkOne(view.talk);
+  const k=role+":talk"; if(k!==lastKey){lastKey=k;toTop()}
+  const L=talkList().slice().reverse();
+  app.innerHTML=`<section class="cv cv-sub">
+    <h1 class="cv-title fit">談話紀錄</h1>
+    <p class="cv-desc seg-auto" style="text-align:left;margin:-10px 0 0">兩個人都同意後才開始記錄。整理好的摘要，兩個人都確認了才會保存。</p>
+    <button type="button" class="cv-primary" id="tk-new">新增一段談話</button>
+    ${L.length?`<div class="rv-list" style="margin-top:16px">${L.map(t=>`<button type="button" class="kn-card rv-jump" data-tk="${t.id}"><span><strong style="display:block">${esc(t.title||"一段談話")}</strong><span class="hint">${esc(t.date)}・${esc(talkStatus(t))}</span></span><span class="hub-go">查看</span></button>`).join("")}</div>`:""}
+  </section>`;
+  document.getElementById("tk-new").onclick=()=>{
+    const id="t"+Date.now().toString(36);
+    talkList().push({id,by:role,date:today(),title:"",consent:{[role]:true},transcript:"",delTranscript:true,sum:{what:"",a:"",b:"",agree:"",todo:""},sent:false,ok:{},notes:[],cat:"",done:false});
+    save(); view={talk:id}; render();
+  };
+  app.querySelectorAll("[data-tk]").forEach(b=>b.onclick=()=>{view={talk:b.dataset.tk};render()});
+  setNav({back:()=>{S.act[role]="hub";view={}},backText:"回到我們的空間"});
+}
+function talkOne(id){
+  const t=talkGet(id); if(!t){view={};return talkAct()}
+  const k=role+":talk:"+id+":"+talkStage(t); if(k!==lastKey){lastKey=k;toTop()}
+  const me=role, ot=other(role), st=talkStage(t);
+  const steps=["兩人同意","整理摘要","兩人確認","分類保存"], si={consent:0,write:1,confirm:2,classify:3,done:3}[st];
+  const head=`<h1 class="cv-title fit">${esc(t.title||"一段談話")}</h1>
+    <ol class="tk-steps">${steps.map((s,i)=>`<li class="${i<si?"done":i===si&&st!=="done"?"now":st==="done"?"done":""}">${s}</li>`).join("")}</ol>`;
+  let body="";
+  if(st==="consent"){
+    const mine=!!(t.consent&&t.consent[me]), theirs=!!(t.consent&&t.consent[ot]);
+    body=`<div class="card">
+      <h3 style="margin:0">記錄之前，先確認兩個人都同意</h3>
+      <p class="seg-auto" style="margin:0">這段談話會被錄音或轉成文字，再整理成摘要。只要有一個人不同意，就不會開始。</p>
+      <ul class="tk-who"><li class="${mine?"on":""}">${esc(nm(me))}：${mine?"已同意":"還沒同意"}</li><li class="${theirs?"on":""}">${esc(nm(ot))}：${theirs?"已同意":"還沒同意"}</li></ul>
+      ${mine?`<p class="hint seg-auto" style="margin:0">等${esc(nm(ot))}也按下同意。</p><div class="actions" style="margin:0"><button type="button" class="btn ghost" id="tk-withdraw">收回同意</button></div>`
+        :`<div class="actions" style="margin:0"><button type="button" class="btn" id="tk-yes">我同意記錄</button><button type="button" class="btn ghost" id="tk-no">這次先不要</button></div>`}
+    </div>`;
+  } else if(st==="write"){
+    const s=t.sum;
+    const f=(key,label,ph)=>`<div><label class="q" for="tk-${key}">${label}</label><textarea id="tk-${key}" placeholder="${ph}">${esc(s[key])}</textarea></div>`;
+    body=`<div class="card">
+      <div><label class="q" for="tk-title">這次談話的名稱（選填）</label><input type="text" id="tk-title" maxlength="20" value="${esc(t.title)}" placeholder="例如：週末安排"></div>
+      <div><label class="q" for="tk-tr">逐字稿（選填）</label>
+        <p class="hint seg-auto">從 Fireflies 或 iPhone 語音備忘錄複製貼上。也可以在 Claude 對話裡說「幫我整理最新的談話」，Claude 會取出逐字稿並填好下面的摘要草稿。</p>
+        <textarea id="tk-tr" style="min-height:120px" placeholder="貼上逐字稿">${esc(t.transcript)}</textarea>
+        <label class="tk-check"><input type="checkbox" id="tk-del" ${t.delTranscript?"checked":""}> 兩個人都確認摘要後，刪除逐字稿，只保留摘要</label></div>
+    </div>
+    <div class="card">
+      <h3 style="margin:0">摘要</h3>
+      <p class="hint seg-auto" style="margin:0">只寫兩個人都聽得到的內容，不替對方解讀。寫好後送給對方確認。</p>
+      ${f("what","這次談了什麼","為什麼問：很久以後再看，也能想起這次在談什麼。")}
+      ${f("a",esc(nm("a"))+"在意的","為什麼問：寫下來，對方可以確認自己有沒有聽懂。")}
+      ${f("b",esc(nm("b"))+"在意的","為什麼問：寫下來，對方可以確認自己有沒有聽懂。")}
+      ${f("agree","達成的共識","為什麼問：說好的事寫下來，之後比較不會各說各話。")}
+      ${f("todo","之後要做的事","為什麼問：具體的下一步，才不會談完就忘了。例如：週五前一起排好週末行程。")}
+      <div class="err" id="tk-er"></div>
+      <div class="actions"><button type="button" class="btn" id="tk-send">送出，請${esc(nm(ot))}確認</button></div>
+    </div>`;
+  } else {
+    const s=t.sum;
+    const row=(l,v)=>v?`<div><b>${l}</b>${raw(v)}</div>`:"";
+    const sumHtml=`<div class="rv-kv">${row("這次談了什麼",s.what)}${row(esc(nm("a"))+"在意的",s.a)}${row(esc(nm("b"))+"在意的",s.b)}${row("達成的共識",s.agree)}${row("之後要做的事",s.todo)}</div>
+      ${t.notes&&t.notes.length?`<h4 style="margin:12px 0 6px">補充</h4><div class="rv-kv">${t.notes.map(n=>`<div><b>${esc(nm(n.by))}</b>${raw(n.text)}</div>`).join("")}</div>`:""}`;
+    if(st==="confirm"){
+      const mine=!!t.ok[me];
+      body=`<div class="card">${sumHtml}</div>
+      <div class="card">
+        <ul class="tk-who"><li class="${t.ok.a?"on":""}">${esc(nm("a"))}：${t.ok.a?"已確認":"還沒確認"}</li><li class="${t.ok.b?"on":""}">${esc(nm("b"))}：${t.ok.b?"已確認":"還沒確認"}</li></ul>
+        ${mine?`<p class="hint seg-auto" style="margin:0">等${esc(nm(ot))}確認。</p>`:`
+        <p class="seg-auto" style="margin:0">這份摘要符合${esc(nm(me))}的意思嗎？</p>
+        <div class="actions" style="margin:0"><button type="button" class="btn" id="tk-ok">確認，沒問題</button><button type="button" class="btn ghost" id="tk-fix">我想補充或修改</button></div>
+        <div id="tk-fixbox" hidden><textarea id="tk-note" placeholder="為什麼問：說出哪裡不是你的意思，摘要會退回修改，兩個人再確認一次。"></textarea><div class="actions" style="margin:0"><button type="button" class="btn" id="tk-note-send">送出補充</button></div></div>`}
+      </div>`;
+    } else if(st==="classify"){
+      body=`<div class="card">${sumHtml}</div>
+      <div class="card"><h3 style="margin:0">這段談話要放在哪裡？</h3>
+        <div class="tk-cats">${TALK_CAT.map(c=>`<button type="button" class="kn-card rv-jump" data-cat="${c[0]}"><span><strong style="display:block">${c[1]}</strong><span class="hint">${c[2]}</span></span></button>`).join("")}</div></div>`;
+    } else {
+      const c=TALK_CAT.find(x=>x[0]===t.cat);
+      body=`<div class="card"><p class="hint" style="margin:0">${esc(t.date)}・${c?c[1]:""}${t.transcript?"":"・逐字稿已刪除"}</p>${sumHtml}</div>`;
+    }
+  }
+  app.innerHTML=`<section class="cv cv-sub">${head}${body}</section>`;
+  const g=x=>document.getElementById(x);
+  if(g("tk-yes"))g("tk-yes").onclick=()=>{t.consent=t.consent||{};t.consent[me]=true;save();render()};
+  if(g("tk-withdraw"))g("tk-withdraw").onclick=()=>{t.consent[me]=false;save();render()};
+  if(g("tk-no"))g("tk-no").onclick=()=>{S.talks=talkList().filter(x=>x.id!==t.id);save();view={};render()};
+  if(st==="write"){
+    const bind=(id,fn)=>{const el=g(id);el.addEventListener("input",()=>{fn(el);clearTimeout(view.tkT);view.tkT=setTimeout(save,600)})};
+    bind("tk-title",el=>t.title=el.value);
+    bind("tk-tr",el=>t.transcript=el.value);
+    ["what","a","b","agree","todo"].forEach(key=>bind("tk-"+key,el=>t.sum[key]=el.value));
+    g("tk-del").onchange=e=>{t.delTranscript=e.target.checked;save()};
+    g("tk-send").onclick=()=>{
+      if(!t.sum.what.trim()&&!t.sum.agree.trim()){g("tk-er").textContent="至少寫下「這次談了什麼」或「達成的共識」。";return}
+      t.sent=true;t.ok={[me]:true};save();render()};
+  }
+  if(g("tk-ok"))g("tk-ok").onclick=()=>{t.ok[me]=true;save();render()};
+  if(g("tk-fix"))g("tk-fix").onclick=()=>{g("tk-fixbox").hidden=false;g("tk-note").focus()};
+  if(g("tk-note-send"))g("tk-note-send").onclick=()=>{const v=g("tk-note").value.trim();if(!v)return;t.notes=t.notes||[];t.notes.push({by:me,text:v});t.sent=false;t.ok={};save();render()};
+  app.querySelectorAll("[data-cat]").forEach(b=>b.onclick=()=>{
+    t.cat=b.dataset.cat;t.done=true;if(t.delTranscript)t.transcript="";
+    if(t.cat==="repair"){S.rh=S.rh||[];S.rh.push({date:t.date,text:t.sum.agree||"",story:[t.sum.what,t.sum.todo?"之後要做的事："+t.sum.todo:""].filter(Boolean).join("\n"),agree:null,reasons:{a:[],b:[]},fromTalk:t.id})}
+    save();render()});
+  setNav({back:()=>{view={}},backText:"回到談話紀錄"});
+}
+
 /* ---------- 回顧 ---------- */
 function quizRecNow(){
   if(quizDone(role)&&!(S.names.b&&quizDone("a")&&quizDone("b"))){
@@ -1620,6 +1756,7 @@ function hub(){
       <button type="button" class="hub-item" id="go-know"><div class="cv-icon cool">${ICONS.know}</div><div class="hub-text"><strong class="fit" data-fg="hub">了解</strong><span class="seg-auto">${esc(kText)}</span></div><span class="hub-go">進入</span></button>
       <button type="button" class="hub-item" id="go-repair"><div class="cv-icon cool">${ICONS.fix}</div><div class="hub-text"><strong class="fit" data-fg="hub">修復</strong><span class="seg-auto">${repairStarted&&!repairDone?`進行中：${esc(STEPS[Math.max(0,stage(role).step)]||"")}。填過的內容都會自動保存，隨時可以回來繼續。`:"發生爭執後，陪你們慢慢把話說開，一起寫下約定。"}</span></div><span class="hub-go">${rState}</span></button>
       <button type="button" class="hub-item" id="go-hw"><div class="cv-icon warm">${ICONS.hw}</div><div class="hub-text"><strong class="fit" data-fg="hub">心裡話</strong><span class="seg-auto">${esc(hwLine())}</span></div><span class="hub-go">${hwUnread().length?"有新的":"寫一段"}</span></button>
+      <button type="button" class="hub-item" id="go-talk"><div class="cv-icon cool">${ICONS.talk}</div><div class="hub-text"><strong class="fit" data-fg="hub">談話紀錄</strong><span class="seg-auto">${esc(talkLine())}</span></div><span class="hub-go">${talkWaiting().length?"需要回應":"進入"}</span></button>
       <button type="button" class="hub-item" id="go-review"><div class="cv-icon cool">${ICONS.review}</div><div class="hub-text"><strong class="fit" data-fg="hub">回顧</strong><span class="seg-auto">${esc(reviewLine())}</span></div><span class="hub-go">查看</span></button>
       <div class="hub-item off" aria-disabled="true"><div class="cv-icon warm">${ICONS.warm}</div><div class="hub-text"><strong class="fit" data-fg="hub">升溫</strong><span class="seg-auto">推薦你們能一起體驗的新鮮事。</span></div><span class="hub-go">即將推出</span></div>
       <div class="hub-item off" aria-disabled="true" data-last="1"><div class="cv-icon warm">${ICONS.daily}</div><div class="hub-text"><strong class="fit" data-fg="hub">日常</strong><span class="seg-auto">每週互相說一句感謝。</span></div><span class="hub-go">即將推出</span></div>
@@ -1644,11 +1781,13 @@ function hub(){
   const cg=document.getElementById("call-go"); if(cg)cg.onclick=startRepair;
   document.getElementById("go-review").onclick=()=>goAct("review");
   document.getElementById("go-hw").onclick=()=>goAct("hw");
+  document.getElementById("go-talk").onclick=()=>goAct("talk");
   const ho=document.getElementById("hw-open"); if(ho)ho.onclick=()=>{const u=hwUnread()[0];S.act[role]="hw";save();view={hwRead:u.id};render()};
 }
 
 let pre="cover";   // screens before a space exists: cover | create | invite
 const ICONS={
+  talk:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3F6E96" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5.5 11a6.5 6.5 0 0 0 13 0"></path><path d="M12 17.5V21"></path></svg>',
   hw:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#B4632A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12.5a7.5 7.5 0 0 1-11.2 6.5L4 20l1.1-4.2A7.5 7.5 0 1 1 20 12.5z"></path><path d="M12 15.2s-3-1.8-3-3.8a1.6 1.6 0 0 1 3-.8 1.6 1.6 0 0 1 3 .8c0 2-3 3.8-3 3.8z"></path></svg>',
   review:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3F6E96" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1"></path><path d="M3 4.5v4h4"></path><path d="M12 7.5V12l3 2"></path></svg>',
   fix:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3F6E96" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="8" width="19" height="8" rx="4" transform="rotate(-45 12 12)"></rect><path d="M10.5 10.5h.01M13.5 13.5h.01M13.5 10.5h.01M10.5 13.5h.01"></path></svg>',
@@ -1740,16 +1879,21 @@ function join(){
 }
 
 function inviteCard(){
-  if(SH_ON) return `<div class="card a"><h3>邀請 ${esc(S.hint||"伴侶")} 加入</h3>
+  if(SH_ON&&S.inviteSent) return `<div class="notify-card" id="inv-mini"><p class="seg-auto">已經邀請${esc(S.hint||"伴侶")}，等對方加入後就能一起使用。</p><button type="button" class="linkbtn" id="inv-again">再看一次邀請方式</button></div>`;
+  if(SH_ON) return `<div class="card a" id="inv-card"><h3>邀請 ${esc(S.hint||"伴侶")} 加入</h3>
    <p class="seg-auto" style="margin:0">在畫面最上方按「分享」，用${esc(S.hint||"伴侶")}的 email 邀請對方，權限選「編輯者」。</p>
-   <p class="hint seg-auto" style="margin:0">對方登入自己的 Claude 帳號、打開這個頁面，就會自動加入。之後兩個人填的內容會即時同步。</p></div>`;
+   <p class="hint seg-auto" style="margin:0">對方登入自己的 Claude 帳號、打開這個頁面，就會自動加入。之後兩個人填的內容會即時同步。</p>
+   <div class="actions" style="margin:0"><button type="button" class="btn ghost" id="inv-done">我已經分享了</button></div></div>`;
   const link=location.href.split(/[?#]/)[0]+"?s="+S.id;
   return `<div class="card a"><h3>邀請 ${esc(S.hint||"伴侶")} 加入</h3>
    <div class="linkbox"><code id="lk">${esc(link)}</code><button class="btn ghost" type="button" id="cp">複製連結</button></div>
    <div class="hint">拿到連結的人就能進入這個空間，請只傳給你的伴侶。</div>
    <div class="demo-note">原型示範：點上方的「${esc(S.hint||"伴侶")}」就能切換成對方的視角。</div></div>`;
 }
-function wireInvite(){const b=document.getElementById("cp");if(!b)return;
+function wireInvite(){
+  const d=document.getElementById("inv-done"); if(d)d.onclick=()=>{S.inviteSent=true;save();render()};
+  const g=document.getElementById("inv-again"); if(g)g.onclick=()=>{S.inviteSent=false;save();render()};
+  const b=document.getElementById("cp");if(!b)return;
   b.onclick=()=>{try{navigator.clipboard.writeText(document.getElementById("lk").textContent).then(()=>{b.textContent="已複製"},()=>{b.textContent="請手動複製"})}catch(e){b.textContent="請手動複製"}}}
 
 function yn(id,q,v){return opts(id,q,[["no","沒有"],["yes","有"]],v)}
