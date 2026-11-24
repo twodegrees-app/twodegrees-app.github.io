@@ -393,7 +393,7 @@ body.on-cover .quick button.used{background:#FBE6CF;border-color:#A0541A}
 .part-label{display:flex;align-items:center;gap:8px;margin:28px 0 10px;font-size:15px;font-weight:700;color:var(--ink)}
 .part-label span{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--me,var(--a));color:#fff;font-size:13px;flex:none}
 .quick{display:flex;flex-wrap:wrap;gap:4px;margin:4px 0 6px}
-.quick button{font:inherit;font-size:12px;padding:2px 8px;border-radius:6px;text-align:left;line-height:1.5;border:1px solid transparent;background:#F6EDE3;color:#8C4814;cursor:pointer}
+.quick button{max-width:100%;font:inherit;font-size:12px;padding:2px 8px;border-radius:6px;text-align:left;line-height:1.5;border:1px solid transparent;background:#F6EDE3;color:#8C4814;cursor:pointer}
 .quick button::before{content:"＋";margin-right:2px;opacity:.6}
 .quick button.used{background:#FBE6CF;border-color:#D9A779}
 .filler{border:1px solid var(--me,var(--a));background:var(--me-soft,var(--a-soft));border-radius:10px;padding:12px 14px;display:grid;gap:8px;margin:0 0 8px}
@@ -410,6 +410,18 @@ input.blank[type=text]{width:calc(var(--w,3) * 1em + 16px);min-width:0;max-width
 .rd{display:block;font-size:14px;color:var(--muted)}
 .ritem{display:grid;gap:2px}
 .rtip{font-size:14px;background:var(--bg);border-radius:8px;padding:8px 10px;margin-top:4px}
+.entry-t{font-size:22px;margin:24px 0 12px}
+.bub-card{gap:6px}
+.card>*{min-width:0}
+.bub-field{position:relative;height:500px;margin:4px -8px 0;overflow:hidden}
+.bub{position:absolute;--s:64px;width:var(--s);height:var(--s);margin:calc(var(--s)/-2) 0 0 calc(var(--s)/-2);border-radius:50%;padding:0;font:inherit;font-size:14px;line-height:1.2;color:#7A4A2A;cursor:pointer;
+  background:radial-gradient(circle at 32% 28%,rgba(255,255,255,.95),rgba(251,232,214,.75) 45%,rgba(236,196,160,.55));border:1px solid rgba(214,160,118,.5);box-shadow:0 2px 8px rgba(160,84,26,.08);
+  transition:width .35s cubic-bezier(.3,1.5,.5,1),height .35s cubic-bezier(.3,1.5,.5,1),margin .35s cubic-bezier(.3,1.5,.5,1),background .3s;animation:bubfloat 7s ease-in-out infinite alternate;-webkit-tap-highlight-color:transparent}
+.bub[aria-pressed="true"]{color:#5E2E0E;font-weight:500;z-index:2;background:radial-gradient(circle at 32% 28%,rgba(255,255,255,.9),rgba(246,190,140,.85) 45%,rgba(214,126,64,.75));border-color:rgba(160,84,26,.55)}
+.bub[data-lv="4"],.bub[data-lv="5"]{font-size:16px}
+@keyframes bubfloat{0%{transform:translate(0,0)}50%{transform:translate(var(--dx),calc(var(--dy)*-1))}100%{transform:translate(calc(var(--dx)*-.6),var(--dy))}}
+@media (prefers-reduced-motion:reduce){.bub{animation:none}}
+.bub-tip{font-size:13px;color:var(--muted);text-align:center;margin:0}
 .feel-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:14px}
 .feel-row .name{min-width:4.5em;font-weight:500}
 .dots{display:flex;gap:4px}
@@ -2020,15 +2032,29 @@ function ready(){
     S[role].ready={temp:d.temp};save();render()};
 }
 
+const BUB_POS=[[20,10],[52,7],[82,13],[34,30],[68,28],[14,47],[50,50],[85,46],[30,70],[66,69],[18,90],[56,91]];
 function entry(){
   const d=draft[role]; d.feel=d.feel||{}; d.needs=d.needs||[];
-  app.innerHTML=`
-  <h1>寫下你的版本</h1>
-  <p class="lead">只寫你自己的感受和需要，不需要評論對方。送出後內容會固定下來，<br>${esc(nm(other(role)))} 也要等自己送出後才看得到。</p>
+  const title=`<h1 class="entry-t">只寫你的感受和需要，不需要評論對方。</h1>`;
+  if(!d.feelDone){
+    app.innerHTML=`${title}
+    <div class="card bub-card">
+      <div class="q" id="f-l">點選你的情緒泡泡</div>
+      ${S[role].fearLoss?`<div class="hint">你提到擔心關係會結束，可以看看「害怕」「孤單」是不是也在你的心裡。</div>`:""}
+      <div class="bub-field" role="group" aria-labelledby="f-l">${FEELINGS.map((f,ix)=>{const [x,y]=BUB_POS[ix%BUB_POS.length];
+        return `<button type="button" class="bub" data-f="${f}" style="left:calc(42px + (100% - 84px)*${x/100});top:calc(62px + (100% - 124px)*${y/100});--dx:${(ix*37%13)-6}px;--dy:${(ix*53%15)-7}px;animation-duration:${6+ix%5}s;animation-delay:-${ix*0.7}s">${f}</button>`}).join("")}</div>
+      <p class="bub-tip">同一個泡泡點越多下，代表它在心裡越大；最大時再點一下就取消。</p>
+      <div class="err" id="er"></div>
+      <div class="actions"><button class="btn" type="button" id="feel-next">下一步</button></div>
+    </div>`;
+    const paint=b=>{const n=d.feel[b.dataset.f]||0; b.style.setProperty("--s",(64+n*11)+"px"); b.dataset.lv=n; b.setAttribute("aria-pressed",n>0); b.setAttribute("aria-label",b.dataset.f+(n?"，強度 "+n+"／5":""))};
+    app.querySelectorAll(".bub").forEach(b=>{paint(b); b.onclick=()=>{const f=b.dataset.f,n=(d.feel[f]||0)+1; if(n>5)delete d.feel[f]; else d.feel[f]=n; paint(b); document.getElementById("er").textContent=""}});
+    document.getElementById("feel-next").onclick=()=>{if(!Object.keys(d.feel).length){document.getElementById("er").textContent="先點一個情緒泡泡。";return} d.feelDone=true; render(); scrollTo(0,0)};
+    return;
+  }
+  app.innerHTML=`${title}
   <div class="card">
-    <div><div class="q" id="f-l">那時候，你感受到了什麼？</div><div class="hint">可以選好幾個，再點數字標出強度。<br>1 是輕微，5 是很強烈。</div>${S[role].fearLoss?`<div class="hint">你提到擔心關係會結束，可以看看「害怕」「孤單」是不是也在你的感受裡。</div>`:""}
-      <div class="chips" role="group" aria-labelledby="f-l" style="margin-top:8px">${FEELINGS.map(f=>`<button type="button" class="chip" data-f="${f}" aria-pressed="${f in d.feel}">${f}</button>`).join("")}</div>
-      <div id="levels" style="display:grid;gap:8px;margin-top:10px"></div></div>
+    <button type="button" class="linkbtn" id="feel-back" style="justify-self:start">← 回到情緒泡泡</button>
     <div><label class="q" for="fact">你看到、聽到了什麼？</label><div class="hint">只寫事實，像攝影機拍到的那樣，不加形容詞。例如「你回家後看了半小時手機」。</div>${quick("fact",reasonOpts("fact",S[role].reasons||[]))}<textarea id="fact" placeholder="為什麼問：把發生的事和自己的解讀分開，對方比較不會覺得被指責。">${esc(d.fact||"")}</textarea></div>
     <div><label class="q" for="interp">你當時怎麼解讀這件事？</label><div class="hint">例如「我以為你不在乎我說的話」。</div>${quick("interp",reasonOpts("interp",S[role].reasons||[]))}<textarea id="interp" placeholder="為什麼問：同一件事，每個人的解讀不同。說出來，對方才知道你是怎麼想的。">${esc(d.interp||"")}</textarea></div>
     <div><label class="q" for="trig">這件事有沒有讓你想起過去的某種經驗或感覺？（選填）</label>${S[role].safety==="trigger"?`<div class="hint">如果你願意，可以讓對方知道你的舊傷被碰到了，這能幫對方理解你當時的反應。</div>`:""}${quick("trig")}<textarea id="trig" placeholder="為什麼問：反應特別大時，常是碰到了過去的經驗。說出來，對方比較能體諒。">${esc(d.trig||"")}</textarea></div>
@@ -2038,11 +2064,7 @@ function entry(){
     <div class="err" id="er"></div>
     <div class="actions"><button class="btn" type="button" id="go">送出</button></div>
   </div>`;
-  const lv=document.getElementById("levels");
-  function drawLevels(){lv.innerHTML=Object.keys(d.feel).map(f=>`<div class="feel-row"><span class="name">${f}</span><span class="dots" role="group" aria-label="${f}的強度">${[1,2,3,4,5].map(n=>`<button type="button" data-lf="${f}" data-lv="${n}" class="${d.feel[f]>=n?"on":""}" aria-label="${n}">${n}</button>`).join("")}</span></div>`).join("");
-    lv.querySelectorAll("[data-lf]").forEach(b=>b.onclick=()=>{d.feel[b.dataset.lf]=+b.dataset.lv;drawLevels()})}
-  drawLevels();
-  app.querySelectorAll("[data-f]").forEach(b=>b.onclick=()=>{const f=b.dataset.f;if(f in d.feel)delete d.feel[f];else d.feel[f]=3;b.setAttribute("aria-pressed",f in d.feel);drawLevels()});
+  document.getElementById("feel-back").onclick=()=>{d.feelDone=false;render();scrollTo(0,0)};
   app.querySelectorAll("[data-n]").forEach(b=>b.onclick=()=>{const n=b.dataset.n;const i=d.needs.indexOf(n);if(i>=0)d.needs.splice(i,1);else d.needs.push(n);b.setAttribute("aria-pressed",i<0)});
   ["fact","interp","trig","care"].forEach(id=>document.getElementById(id).oninput=e=>{d[id]=e.target.value});
   document.getElementById("go").onclick=()=>{
