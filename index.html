@@ -1565,7 +1565,7 @@ function talkOne(id){
     const mine=!!(t.consent&&t.consent[me]), theirs=!!(t.consent&&t.consent[ot]);
     body=`<div class="card">
       <h3 style="margin:0">記錄之前，先確認兩個人都同意</h3>
-      <p class="seg-auto" style="margin:0">這段談話會被錄音或轉成文字，再整理成摘要。只要有一個人不同意，就不會開始。</p>
+      <p class="seg-auto" style="margin:0">這段談話會用 Fireflies 錄音、轉成文字，再整理成摘要。只要有一個人不同意，就不會開始。</p>
       <ul class="tk-who"><li class="${mine?"on":""}">${esc(nm(me))}：${mine?"已同意":"還沒同意"}</li><li class="${theirs?"on":""}">${esc(nm(ot))}：${theirs?"已同意":"還沒同意"}</li></ul>
       ${mine?`<p class="hint seg-auto" style="margin:0">等${esc(nm(ot))}也按下同意。</p><div class="actions" style="margin:0"><button type="button" class="btn ghost" id="tk-withdraw">收回同意</button></div>`
         :`<div class="actions" style="margin:0"><button type="button" class="btn" id="tk-yes">我同意記錄</button><button type="button" class="btn ghost" id="tk-no">這次先不要</button></div>`}
@@ -1576,8 +1576,8 @@ function talkOne(id){
     body=`<div class="card">
       <div><label class="q" for="tk-title">這次談話的名稱（選填）</label><input type="text" id="tk-title" maxlength="20" value="${esc(t.title)}" placeholder="例如：週末安排"></div>
       <div><label class="q" for="tk-tr">逐字稿（選填）</label>
-        <p class="hint seg-auto">從 Fireflies 或 iPhone 語音備忘錄複製貼上。也可以在 Claude 對話裡說「幫我整理最新的談話」，Claude 會取出逐字稿並填好下面的摘要草稿。</p>
-        <textarea id="tk-tr" style="min-height:120px" placeholder="貼上逐字稿">${esc(t.transcript)}</textarea>
+        <p class="hint seg-auto">談話時用 Fireflies 錄音，結束後到 Fireflies 複製逐字稿貼在這裡。</p>
+        <textarea id="tk-tr" style="min-height:120px" placeholder="貼上 Fireflies 的逐字稿">${esc(t.transcript)}</textarea>
         <label class="tk-check"><input type="checkbox" id="tk-del" ${t.delTranscript?"checked":""}> 兩個人都確認摘要後，刪除逐字稿，只保留摘要</label>
         ${SAMPLE?`<div class="tk-ai"><button type="button" class="btn" id="tk-ai">請 Claude 整理成摘要</button><p class="hint seg-auto" id="tk-ai-m" aria-live="polite">Claude 只會整理逐字稿裡說到的內容，整理完你們還可以修改。</p></div>`:`<p class="hint seg-auto">在 Claude App 或 claude.ai 裡打開於溫，就可以請 Claude 自動整理摘要。</p>`}</div>
     </div>
