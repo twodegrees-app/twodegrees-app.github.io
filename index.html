@@ -329,7 +329,7 @@ body.cloud .demo-note{display:none}
 .kn-form{gap:18px}
 .kn-form input[type=text]{background:#fff;color:#2B2F33;border-color:#DCD3C6}
 .kn-form .q{color:#2B2F33;margin-bottom:2px}
-body.on-cover .quick button{border-color:#C9A27F;color:#8C4814}
+body.on-cover .quick button{color:#8C4814}
 body.on-cover .quick button.used{background:#FBE6CF;border-color:#A0541A}
 .kn-ans li{display:grid;gap:4px;padding:10px 12px;background:#FAF7F2;border-radius:10px}
 .kn-ans li span{display:flex;gap:8px;font-size:13px;color:#2B2F33}
@@ -392,10 +392,10 @@ body.on-cover .quick button.used{background:#FBE6CF;border-color:#A0541A}
 .linkbtn{font:inherit;font-size:13px;background:none;border:none;padding:6px 0;color:var(--me,var(--a));text-decoration:underline;text-underline-offset:3px;cursor:pointer}
 .part-label{display:flex;align-items:center;gap:8px;margin:28px 0 10px;font-size:15px;font-weight:700;color:var(--ink)}
 .part-label span{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--me,var(--a));color:#fff;font-size:13px;flex:none}
-.quick{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 8px}
-.quick button{font:inherit;font-size:13px;padding:4px 10px;border-radius:14px;text-align:left;line-height:1.5;border:1px dashed var(--me,var(--a));background:transparent;color:var(--me,var(--a));cursor:pointer}
-.quick button::before{content:"＋ "}
-.quick button.used{border-style:solid;background:var(--me-soft,var(--a-soft))}
+.quick{display:flex;flex-wrap:wrap;gap:4px;margin:4px 0 6px}
+.quick button{font:inherit;font-size:12px;padding:2px 8px;border-radius:6px;text-align:left;line-height:1.5;border:1px solid transparent;background:#F6EDE3;color:#8C4814;cursor:pointer}
+.quick button::before{content:"＋";margin-right:2px;opacity:.6}
+.quick button.used{background:#FBE6CF;border-color:#D9A779}
 .filler{border:1px solid var(--me,var(--a));background:var(--me-soft,var(--a-soft));border-radius:10px;padding:12px 14px;display:grid;gap:8px;margin:0 0 8px}
 .filler-line{line-height:2.3;font-size:15px}
 .filler .actions{margin-top:0}
