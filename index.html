@@ -187,8 +187,8 @@ body.cloud .demo-note{display:none}
 .tk-ai .btn{justify-self:start}
 .tk-cats{display:grid;gap:8px}
 .hw-auto{color:#8A6A55;text-decoration:underline dotted #C9A88C;text-underline-offset:4px}
-.hw-frame{display:grid;gap:6px}
-.hw-pre,.hw-suf{font-size:14px}
+.hw-frame{position:relative}
+.hw-pre{position:absolute;pointer-events:none;white-space:nowrap;z-index:1}
 .hw-legend{margin:0;font-size:13px;color:#5E6670}
 .hw-prev{padding:14px 16px;background:#FAF7F2;border-radius:12px;line-height:1.9;font-size:16px;white-space:pre-wrap}
 .navrow{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:4px;min-height:44px}
@@ -1434,9 +1434,9 @@ function hwWrite(){
   const k=role+":hwWrite"; if(k!==lastKey){lastKey=k;toTop()}
   const d=draft[role].hw||(draft[role].hw={cat:"",req:"",fear:"",why:"",tog:"",msg:"",edit:false});
   const ot=nm(other(role));
-  const PRE={req:["有件事我想了很久才說出口：我希望",""],fear:["我擔心說出來會",""],why:["但",""],tog:["我很在意"+ot+"的感受，我們可以一起","嗎？"]};
-  const field=(id,label,hint,ph)=>`<div><label class="q" for="hw-${id}">${label}</label><p class="hint">${hint}</p>${quick("hw-"+id,hwChips(d.cat,id))}
-    <div class="hw-frame"><span class="hw-auto hw-pre">${esc(PRE[id][0])}</span><textarea id="hw-${id}" placeholder="${ph}">${esc(d[id])}</textarea>${PRE[id][1]?`<span class="hw-auto hw-suf">${esc(PRE[id][1])}</span>`:""}</div></div>`;
+  const PRE={req:"我希望",fear:"我擔心說出來會",why:"但",tog:"我們可以一起"};
+  const field=(id,label,hint,ph)=>`<div><label class="q" for="hw-${id}">${label}</label>${quick("hw-"+id,hwChips(d.cat,id))}
+    <div class="hw-frame"><span class="hw-auto hw-pre" aria-hidden="true">${esc(PRE[id])}</span><textarea id="hw-${id}" aria-label="${esc(PRE[id])}……" placeholder="${ph}">${esc(d[id])}</textarea></div></div>`;
   app.innerHTML=`<section class="cv cv-sub hw-write">
     <h1 class="cv-title fit">寫一段心裡話</h1>
     <p class="cv-desc seg-auto" style="text-align:left;margin:-10px 0 0">連同你的擔心一起說出來，對方比較能感受到你的在乎。只有第一題必填。</p>
@@ -1445,7 +1445,6 @@ function hwWrite(){
         <div class="chips" role="group" aria-labelledby="hw-cat-l">${HW_CAT.map(c=>`<button type="button" class="chip" data-hwcat="${c.k}" aria-pressed="${d.cat===c.k}">${c.n}</button>`).join("")}</div></div>
     </div>
     <div class="card">
-      <p class="hw-legend"><span class="hw-auto">虛線底的字</span>是系統會自動加上的，你只要寫空白的部分。</p>
       ${field("req","1. 你想請"+esc(ot)+"……","說出具體的請求，越具體越容易做到。","為什麼問：具體的請求，對方才知道可以怎麼做。")}
       ${field("fear","2. 說出來，你擔心會……","把擔心說出來，對方會知道你是在乎才猶豫。","為什麼問：先說出擔心，對方比較不會覺得被指責。")}
       ${field("why","3. 這不是因為……","讓對方知道這個請求背後真正的原因。","為什麼問：說出真正的原因，可以避免對方往壞的方向想。")}
@@ -1465,6 +1464,10 @@ function hwWrite(){
   </section>`;
   app.querySelectorAll("[data-hwcat]").forEach(b=>b.onclick=()=>{d.cat=d.cat===b.dataset.hwcat?"":b.dataset.hwcat;const y=scrollY;render();scrollTo(0,y)});
   wireQuick();
+  const fitPre=()=>app.querySelectorAll(".hw-frame").forEach(f=>{const p=f.querySelector(".hw-pre"),t=f.querySelector("textarea"); if(!p||!t)return;
+    const cs=getComputedStyle(t); p.style.left=(parseFloat(cs.paddingLeft)+parseFloat(cs.borderLeftWidth))+"px"; p.style.top=(parseFloat(cs.paddingTop)+parseFloat(cs.borderTopWidth))+"px";
+    p.style.fontSize=cs.fontSize; p.style.lineHeight=cs.lineHeight; t.style.textIndent=(p.offsetWidth+4)+"px"});
+  fitPre(); if(document.fonts&&document.fonts.ready)document.fonts.ready.then(fitPre);
   const M=document.getElementById("hw-msg"), R=document.getElementById("hw-regen"), P=document.getElementById("hw-prev"), E=document.getElementById("hw-editall");
   const upd=()=>{if(!d.edit){d.msg=hwCompose(d); if(P)P.innerHTML=hwPrevHtml(d)}};
   ["req","fear","why","tog"].forEach(id=>{const el=document.getElementById("hw-"+id);el.addEventListener("input",()=>{d[id]=el.value;upd()})});
