@@ -186,6 +186,11 @@ body.cloud .demo-note{display:none}
 .tk-ai{display:grid;gap:6px;margin-top:12px}
 .tk-ai .btn{justify-self:start}
 .tk-cats{display:grid;gap:8px}
+.hw-auto{color:#8A6A55;text-decoration:underline dotted #C9A88C;text-underline-offset:4px}
+.hw-frame{display:grid;gap:6px}
+.hw-pre,.hw-suf{font-size:14px}
+.hw-legend{margin:0;font-size:13px;color:#5E6670}
+.hw-prev{padding:14px 16px;background:#FAF7F2;border-radius:12px;line-height:1.9;font-size:16px;white-space:pre-wrap}
 .navrow{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:4px;min-height:44px}
 .nav-reset{font:inherit;font-size:14px;background:none;border:none;color:#8A6A55;text-decoration:underline;text-underline-offset:3px;cursor:pointer;padding:8px 0;white-space:nowrap}
 .nav-confirm{margin-top:4px;padding:16px;border-radius:14px;background:#FFF7EE;border:1px solid #EADFD2;display:grid;gap:12px}
@@ -1393,15 +1398,18 @@ const HW_REPLY=["謝謝你告訴我","我需要想一想","我們找時間聊聊
 function hwList(){return S.hw||(S.hw=[])}
 function hwUnread(){return hwList().filter(h=>h.to===role&&!h.readAt)}
 function hwLine(){const u=hwUnread().length;if(u)return `${nm(other(role))}留了 ${u} 段心裡話給你。`;return "有些話很難開口，這裡陪你慢慢說出來。"}
-function hwCompose(d){
+function hwSegs(d){
   const ot=nm(other(role)), t=x=>(x||"").trim().replace(/[。！!，,]+$/,"");
-  if(!t(d.req))return "";
-  let m="有件事我想了很久才說出口：我希望"+t(d.req)+"。";
-  if(t(d.fear)) m+="我擔心說出來會"+t(d.fear)+"，";
-  if(t(d.why)) m+=(t(d.fear)?"但":"")+t(d.why)+"。"; else if(t(d.fear)) m=m.replace(/，$/,"。");
-  m+="我很在意"+ot+"的感受"+(t(d.tog)?"，我們可以一起"+t(d.tog)+"嗎？":"。");
-  return m;
+  if(!t(d.req))return [];
+  const g=[{a:1,t:"有件事我想了很久才說出口：我希望"},{t:t(d.req)},{a:1,t:"。"}];
+  if(t(d.fear)) g.push({a:1,t:"我擔心說出來會"},{t:t(d.fear)},{a:1,t:t(d.why)?"，":"。"});
+  if(t(d.why)) g.push(...(t(d.fear)?[{a:1,t:"但"}]:[]),{t:t(d.why)},{a:1,t:"。"});
+  g.push({a:1,t:"我很在意"+ot+"的感受"+(t(d.tog)?"，我們可以一起":"。")});
+  if(t(d.tog)) g.push({t:t(d.tog)},{a:1,t:"嗎？"});
+  return g;
 }
+function hwCompose(d){return hwSegs(d).map(x=>x.t).join("")}
+function hwPrevHtml(d){const g=hwSegs(d); return g.length?g.map(x=>x.a?`<span class="hw-auto">${esc(x.t)}</span>`:raw(x.t)).join(""):`<span class="hint">填完第一題，這裡就會出現一段話。</span>`}
 function hwAct(){
   if(view.hwRead) return hwRead(view.hwRead);
   if(view.hwWrite) return hwWrite();
@@ -1426,7 +1434,9 @@ function hwWrite(){
   const k=role+":hwWrite"; if(k!==lastKey){lastKey=k;toTop()}
   const d=draft[role].hw||(draft[role].hw={cat:"",req:"",fear:"",why:"",tog:"",msg:"",edit:false});
   const ot=nm(other(role));
-  const field=(id,label,hint,ph)=>`<div><label class="q" for="hw-${id}">${label}</label><p class="hint">${hint}</p>${quick("hw-"+id,hwChips(d.cat,id))}<textarea id="hw-${id}" placeholder="${ph}">${esc(d[id])}</textarea></div>`;
+  const PRE={req:["有件事我想了很久才說出口：我希望",""],fear:["我擔心說出來會",""],why:["但",""],tog:["我很在意"+ot+"的感受，我們可以一起","嗎？"]};
+  const field=(id,label,hint,ph)=>`<div><label class="q" for="hw-${id}">${label}</label><p class="hint">${hint}</p>${quick("hw-"+id,hwChips(d.cat,id))}
+    <div class="hw-frame"><span class="hw-auto hw-pre">${esc(PRE[id][0])}</span><textarea id="hw-${id}" placeholder="${ph}">${esc(d[id])}</textarea>${PRE[id][1]?`<span class="hw-auto hw-suf">${esc(PRE[id][1])}</span>`:""}</div></div>`;
   app.innerHTML=`<section class="cv cv-sub hw-write">
     <h1 class="cv-title fit">寫一段心裡話</h1>
     <p class="cv-desc seg-auto" style="text-align:left;margin:-10px 0 0">連同你的擔心一起說出來，對方比較能感受到你的在乎。只有第一題必填。</p>
@@ -1435,6 +1445,7 @@ function hwWrite(){
         <div class="chips" role="group" aria-labelledby="hw-cat-l">${HW_CAT.map(c=>`<button type="button" class="chip" data-hwcat="${c.k}" aria-pressed="${d.cat===c.k}">${c.n}</button>`).join("")}</div></div>
     </div>
     <div class="card">
+      <p class="hw-legend"><span class="hw-auto">虛線底的字</span>是系統會自動加上的，你只要寫空白的部分。</p>
       ${field("req","1. 你想請"+esc(ot)+"……","說出具體的請求，越具體越容易做到。","為什麼問：具體的請求，對方才知道可以怎麼做。")}
       ${field("fear","2. 說出來，你擔心會……","把擔心說出來，對方會知道你是在乎才猶豫。","為什麼問：先說出擔心，對方比較不會覺得被指責。")}
       ${field("why","3. 這不是因為……","讓對方知道這個請求背後真正的原因。","為什麼問：說出真正的原因，可以避免對方往壞的方向想。")}
@@ -1442,20 +1453,24 @@ function hwWrite(){
     </div>
     <div class="card">
       <label class="q" for="hw-msg">${esc(ot)}會看到的話</label>
-      <p class="hint">會依照上面的內容自動組成，也可以自己修改。</p>
-      <textarea id="hw-msg" style="min-height:150px" placeholder="填完第一題，這裡就會出現一段話。">${esc(d.msg)}</textarea>
-      <button type="button" class="linkbtn" id="hw-regen" ${d.edit?"":"hidden"}>依照上面的內容重新組一次</button>
+      ${d.edit?`<p class="hint">正在自己修改整段。</p>
+      <textarea id="hw-msg" style="min-height:150px">${esc(d.msg)}</textarea>
+      <button type="button" class="linkbtn" id="hw-regen">依照上面的內容重新組一次</button>`
+      :`<p class="hint"><span class="hw-auto">虛線底</span>是自動加上的字，其他是你寫的。</p>
+      <div class="hw-prev" id="hw-prev">${hwPrevHtml(d)}</div>
+      <button type="button" class="linkbtn" id="hw-editall">自己修改整段</button>`}
       <div class="err" id="hw-er"></div>
       <div class="actions"><button type="button" class="btn" id="hw-send">送出給${esc(ot)}</button></div>
     </div>
   </section>`;
   app.querySelectorAll("[data-hwcat]").forEach(b=>b.onclick=()=>{d.cat=d.cat===b.dataset.hwcat?"":b.dataset.hwcat;const y=scrollY;render();scrollTo(0,y)});
   wireQuick();
-  const M=document.getElementById("hw-msg"), R=document.getElementById("hw-regen");
-  const upd=()=>{if(!d.edit){d.msg=hwCompose(d);M.value=d.msg}};
+  const M=document.getElementById("hw-msg"), R=document.getElementById("hw-regen"), P=document.getElementById("hw-prev"), E=document.getElementById("hw-editall");
+  const upd=()=>{if(!d.edit){d.msg=hwCompose(d); if(P)P.innerHTML=hwPrevHtml(d)}};
   ["req","fear","why","tog"].forEach(id=>{const el=document.getElementById("hw-"+id);el.addEventListener("input",()=>{d[id]=el.value;upd()})});
-  M.oninput=()=>{d.msg=M.value;d.edit=true;R.hidden=false};
-  R.onclick=()=>{d.edit=false;R.hidden=true;upd()};
+  if(M)M.oninput=()=>{d.msg=M.value};
+  if(R)R.onclick=()=>{d.edit=false;upd();const y=scrollY;render();scrollTo(0,y)};
+  if(E)E.onclick=()=>{d.msg=hwCompose(d);d.edit=true;const y=scrollY;render();scrollTo(0,y);const m=document.getElementById("hw-msg");if(m)m.focus()};
   document.getElementById("hw-send").onclick=()=>{
     if(!d.req.trim()){document.getElementById("hw-er").textContent="請先寫下第一題：你想請對方做的事。";return}
     const msg=(d.msg||hwCompose(d)).trim();
