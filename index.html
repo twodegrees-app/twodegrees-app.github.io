@@ -1409,7 +1409,7 @@ function hwSegs(d){
   return g;
 }
 function hwCompose(d){return hwSegs(d).map(x=>x.t).join("")}
-function hwPrevHtml(d){const g=hwSegs(d); return g.length?g.map(x=>x.a?`<span class="hw-auto">${esc(x.t)}</span>`:raw(x.t)).join(""):`<span class="hint">填完第一題，這裡就會出現一段話。</span>`}
+function hwPrevHtml(d){const g=hwSegs(d); return g.length?g.map(x=>x.a?esc(x.t):raw(x.t)).join(""):`<span class="hint">填完第一題，這裡就會出現一段話。</span>`}
 function hwAct(){
   if(view.hwRead) return hwRead(view.hwRead);
   if(view.hwWrite) return hwWrite();
@@ -1436,7 +1436,7 @@ function hwWrite(){
   const ot=nm(other(role));
   const PRE={req:"我希望",fear:"我擔心說出來會",why:"但",tog:"我們可以一起"};
   const field=(id,label,hint,ph)=>`<div><label class="q" for="hw-${id}">${label}</label>${quick("hw-"+id,hwChips(d.cat,id))}
-    <div class="hw-frame"><span class="hw-auto hw-pre" aria-hidden="true">${esc(PRE[id])}</span><textarea id="hw-${id}" aria-label="${esc(PRE[id])}……" placeholder="${ph}">${esc(d[id])}</textarea></div></div>`;
+    <textarea id="hw-${id}" placeholder="${ph}">${esc(d[id])}</textarea></div>`;
   app.innerHTML=`<section class="cv cv-sub hw-write">
     <h1 class="cv-title fit">寫一段心裡話</h1>
     <p class="cv-desc seg-auto" style="text-align:left;margin:-10px 0 0">連同你的擔心一起說出來，對方比較能感受到你的在乎。只有第一題必填。</p>
@@ -1455,8 +1455,7 @@ function hwWrite(){
       ${d.edit?`<p class="hint">正在自己修改整段。</p>
       <textarea id="hw-msg" style="min-height:150px">${esc(d.msg)}</textarea>
       <button type="button" class="linkbtn" id="hw-regen">依照上面的內容重新組一次</button>`
-      :`<p class="hint"><span class="hw-auto">虛線底</span>是自動加上的字，其他是你寫的。</p>
-      <div class="hw-prev" id="hw-prev">${hwPrevHtml(d)}</div>
+      :`<div class="hw-prev" id="hw-prev">${hwPrevHtml(d)}</div>
       <button type="button" class="linkbtn" id="hw-editall">自己修改整段</button>`}
       <div class="err" id="hw-er"></div>
       <div class="actions"><button type="button" class="btn" id="hw-send">送出給${esc(ot)}</button></div>
@@ -1464,10 +1463,6 @@ function hwWrite(){
   </section>`;
   app.querySelectorAll("[data-hwcat]").forEach(b=>b.onclick=()=>{d.cat=d.cat===b.dataset.hwcat?"":b.dataset.hwcat;const y=scrollY;render();scrollTo(0,y)});
   wireQuick();
-  const fitPre=()=>app.querySelectorAll(".hw-frame").forEach(f=>{const p=f.querySelector(".hw-pre"),t=f.querySelector("textarea"); if(!p||!t)return;
-    const cs=getComputedStyle(t); p.style.left=(parseFloat(cs.paddingLeft)+parseFloat(cs.borderLeftWidth))+"px"; p.style.top=(parseFloat(cs.paddingTop)+parseFloat(cs.borderTopWidth))+"px";
-    p.style.fontSize=cs.fontSize; p.style.lineHeight=cs.lineHeight; t.style.textIndent=(p.offsetWidth+4)+"px"});
-  fitPre(); if(document.fonts&&document.fonts.ready)document.fonts.ready.then(fitPre);
   const M=document.getElementById("hw-msg"), R=document.getElementById("hw-regen"), P=document.getElementById("hw-prev"), E=document.getElementById("hw-editall");
   const upd=()=>{if(!d.edit){d.msg=hwCompose(d); if(P)P.innerHTML=hwPrevHtml(d)}};
   ["req","fear","why","tog"].forEach(id=>{const el=document.getElementById("hw-"+id);el.addEventListener("input",()=>{d[id]=el.value;upd()})});
