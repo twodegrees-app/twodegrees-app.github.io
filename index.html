@@ -183,6 +183,8 @@ body.cloud .demo-note{display:none}
 .tk-who li{padding:8px 12px;border-radius:10px;background:#FAF7F2;font-size:14px}
 .tk-who li.on{background:#E3EDE6;color:#2F5A3E;font-weight:600}
 .tk-check{display:flex;gap:8px;align-items:flex-start;font-size:13px;color:#5E6670;margin-top:8px;line-height:1.6}
+.tk-ai{display:grid;gap:6px;margin-top:12px}
+.tk-ai .btn{justify-self:start}
 .tk-cats{display:grid;gap:8px}
 .navrow{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:4px;min-height:44px}
 .nav-reset{font:inherit;font-size:14px;background:none;border:none;color:#8A6A55;text-decoration:underline;text-underline-offset:3px;cursor:pointer;padding:8px 0;white-space:nowrap}
@@ -548,6 +550,26 @@ async function cloudPush(){
     }while(pushAgain);
   }catch(e){}
   pushing=false;
+}
+let SAMPLE=null;
+async function sampleInit(){try{ if(!window.claude||typeof window.claude.use!=="function")return; const sm=await window.claude.use("sample"); if(sm){SAMPLE=sm; if(S&&S.act&&S.act[role]==="talk")renderSoon()} }catch(e){}}
+async function talkSummarize(t){
+  const A=nm("a"), B=nm("b");
+  const prompt=`你是一位溫和、中立的伴侶溝通協助者。下面是一對伴侶（${A} 和 ${B}）談話的逐字稿。請整理成摘要，給他們兩個人一起確認。
+
+規則：
+- 使用繁體中文（台灣用語），句子簡短、具體。
+- 只寫逐字稿裡真的有說到的內容，不要推測、不要加入建議、不要評斷誰對誰錯。
+- 用名字（${A}、${B}）稱呼，不要用「你」「他」「她」。
+- 逐字稿的說話者如果沒有標名字，或標成「Speaker 1」這類代號，能從內容清楚判斷才對應到名字；判斷不了，就用中性的寫法，不要硬分。
+- 某一欄逐字稿裡沒有提到，就留空字串。
+
+只回覆一個 JSON 物件，格式如下：
+{"title":"10 字以內的標題","what":"這次談了什麼（1–3 句）","a":"${A}在意的（1–3 句）","b":"${B}在意的（1–3 句）","agree":"達成的共識（沒有就留空）","todo":"之後要做的事（沒有就留空）"}
+
+逐字稿：
+${t.transcript.slice(0,60000)}`;
+  return await SAMPLE.json(prompt,{cache:false});
 }
 async function cloudInit(){
   try{
@@ -1556,7 +1578,8 @@ function talkOne(id){
       <div><label class="q" for="tk-tr">逐字稿（選填）</label>
         <p class="hint seg-auto">從 Fireflies 或 iPhone 語音備忘錄複製貼上。也可以在 Claude 對話裡說「幫我整理最新的談話」，Claude 會取出逐字稿並填好下面的摘要草稿。</p>
         <textarea id="tk-tr" style="min-height:120px" placeholder="貼上逐字稿">${esc(t.transcript)}</textarea>
-        <label class="tk-check"><input type="checkbox" id="tk-del" ${t.delTranscript?"checked":""}> 兩個人都確認摘要後，刪除逐字稿，只保留摘要</label></div>
+        <label class="tk-check"><input type="checkbox" id="tk-del" ${t.delTranscript?"checked":""}> 兩個人都確認摘要後，刪除逐字稿，只保留摘要</label>
+        ${SAMPLE?`<div class="tk-ai"><button type="button" class="btn" id="tk-ai">請 Claude 整理成摘要</button><p class="hint seg-auto" id="tk-ai-m" aria-live="polite">Claude 只會整理逐字稿裡說到的內容，整理完你們還可以修改。</p></div>`:`<p class="hint seg-auto">在 Claude App 或 claude.ai 裡打開於溫，就可以請 Claude 自動整理摘要。</p>`}</div>
     </div>
     <div class="card">
       <h3 style="margin:0">摘要</h3>
@@ -1604,6 +1627,27 @@ function talkOne(id){
     bind("tk-tr",el=>t.transcript=el.value);
     ["what","a","b","agree","todo"].forEach(key=>bind("tk-"+key,el=>t.sum[key]=el.value));
     g("tk-del").onchange=e=>{t.delTranscript=e.target.checked;save()};
+    const ai=g("tk-ai");
+    if(ai) ai.onclick=async()=>{
+      const m=g("tk-ai-m");
+      t.transcript=g("tk-tr").value;
+      if(!t.transcript.trim()){m.textContent="請先貼上逐字稿。";return}
+      const filled=["what","a","b","agree","todo"].some(k=>(t.sum[k]||"").trim());
+      if(filled&&!view.tkOver){view.tkOver=true;m.textContent="下面的摘要已經有內容，再按一次，會用 Claude 整理的版本取代。";return}
+      view.tkOver=false; ai.disabled=true; m.textContent="整理中，大約需要半分鐘到一分鐘……";
+      try{
+        const r=await talkSummarize(t);
+        if(!r||typeof r!=="object")throw {code:"invalid_json"};
+        ["what","a","b","agree","todo"].forEach(k=>{t.sum[k]=typeof r[k]==="string"?r[k]:""});
+        if(!t.title&&typeof r.title==="string")t.title=r.title.slice(0,20);
+        save(); render();
+        const m2=document.getElementById("tk-ai-m"); if(m2)m2.textContent="整理好了。請兩個人檢查，有不對的地方直接修改。";
+      }catch(e){
+        ai.disabled=false;
+        const c=e&&e.code;
+        m.textContent=c==="not_granted"||c==="sampling_disabled"?"這次沒有允許 Claude 整理，可以自己寫摘要。":c==="rate_limited"?"使用量已達上限，請稍後再試。":c==="prompt_too_large"?"逐字稿太長了，請分成幾段整理。":"整理失敗了，請再按一次，或自己寫摘要。";
+      }
+    };
     g("tk-send").onclick=()=>{
       if(!t.sum.what.trim()&&!t.sum.agree.trim()){g("tk-er").textContent="至少寫下「這次談了什麼」或「達成的共識」。";return}
       t.sent=true;t.ok={[me]:true};save();render()};
@@ -2349,6 +2393,7 @@ function loadExample(){
 
 render();
 cloudInit();
+sampleInit();
 })();
 </script>
 </body>
