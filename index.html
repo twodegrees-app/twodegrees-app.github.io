@@ -433,9 +433,10 @@ input.blank[type=text]{width:calc(var(--w,3) * 1em + 16px);min-width:0;max-width
 .thermo{display:flex;align-items:center;margin:10px 0 4px}
 .th-bulb{flex:none;width:38px;height:38px;border-radius:50%;background:var(--bulb);border:2px solid #D9C3AE;margin-right:-8px;position:relative;z-index:1;box-shadow:inset -4px -5px 8px rgba(120,60,20,.12),inset 4px 4px 6px rgba(255,255,255,.5);transition:background .3s}
 .th-tube{flex:1;display:grid;grid-template-columns:repeat(10,1fr);height:26px;border:2px solid #D9C3AE;border-left:0;border-radius:0 14px 14px 0;background:linear-gradient(to right,var(--bulb) 10px,#FAF4EE 10px);overflow:hidden;padding-left:10px;transition:background .3s}
-.th-tube button{font:inherit;font-size:12px;font-variant-numeric:tabular-nums;border:0;border-right:1px solid rgba(217,195,174,.6);background:transparent;color:#A08470;cursor:pointer;padding:0;transition:background .25s}
+.th-tube button{font:inherit;font-size:12px;font-variant-numeric:tabular-nums;border:0;border-right:1px solid rgba(255,255,255,.6);background:color-mix(in srgb,var(--c) 28%,#FAF4EE);color:#9A7A62;cursor:pointer;padding:0;transition:background .25s}
 .th-tube button:last-child{border-right:0}
-.th-tube button.fill{background:var(--c);color:#fff;border-right-color:rgba(255,255,255,.35)}
+.th-tube button.fill{background:var(--c);color:#fff;text-shadow:0 0 2px rgba(120,50,10,.35);border-right-color:rgba(255,255,255,.35)}
+.th-tube button.fill[data-t="1"],.th-tube button.fill[data-t="2"],.th-tube button.fill[data-t="3"]{color:#7A4A2A;text-shadow:none}
 .th-tube button.cur{font-weight:700;font-size:14px}
 .th-scale{padding-left:30px}
 .temp-scale{display:flex;justify-content:space-between;font-size:12px;color:var(--muted)}
@@ -2006,7 +2007,7 @@ function paused(){
   document.getElementById("tohub2").onclick=()=>goAct("hub");
 }
 
-function thC(n){const k=(n-1)/9;return `hsl(${Math.round(40-30*k)} ${Math.round(70+12*k)}% ${Math.round(70-20*k)}%)`}
+function thC(n){const k=(n-1)/9;return `hsl(${Math.round(44-38*k)} ${Math.round(78+4*k)}% ${Math.round(86-46*k)}%)`}
 function ready(){
   const d=draft[role];
   if(view.rest){
