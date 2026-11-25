@@ -430,6 +430,14 @@ input.blank[type=text]{width:calc(var(--w,3) * 1em + 16px);min-width:0;max-width
 .temp{display:grid;grid-template-columns:repeat(10,1fr);gap:4px}
 .temp button{font:inherit;padding:8px 0;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer;font-variant-numeric:tabular-nums}
 .temp button.on{background:var(--me,var(--a));color:#fff;border-color:var(--me,var(--a))}
+.thermo{display:flex;align-items:center;margin:10px 0 4px}
+.th-bulb{flex:none;width:38px;height:38px;border-radius:50%;background:var(--bulb);border:2px solid #D9C3AE;margin-right:-8px;position:relative;z-index:1;box-shadow:inset -4px -5px 8px rgba(120,60,20,.12),inset 4px 4px 6px rgba(255,255,255,.5);transition:background .3s}
+.th-tube{flex:1;display:grid;grid-template-columns:repeat(10,1fr);height:26px;border:2px solid #D9C3AE;border-left:0;border-radius:0 14px 14px 0;background:linear-gradient(to right,var(--bulb) 10px,#FAF4EE 10px);overflow:hidden;padding-left:10px;transition:background .3s}
+.th-tube button{font:inherit;font-size:12px;font-variant-numeric:tabular-nums;border:0;border-right:1px solid rgba(217,195,174,.6);background:transparent;color:#A08470;cursor:pointer;padding:0;transition:background .25s}
+.th-tube button:last-child{border-right:0}
+.th-tube button.fill{background:var(--c);color:#fff;border-right-color:rgba(255,255,255,.35)}
+.th-tube button.cur{font-weight:700;font-size:14px}
+.th-scale{padding-left:30px}
 .temp-scale{display:flex;justify-content:space-between;font-size:12px;color:var(--muted)}
 .actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:6px}
 .btn{font:inherit;font-weight:500;padding:10px 18px;border-radius:8px;border:1px solid var(--me,var(--a));background:var(--me,var(--a));color:#fff;cursor:pointer}
@@ -571,7 +579,7 @@ async function cloudPush(){
 let SAMPLE=null;
 async function sampleInit(){try{ if(!window.claude||typeof window.claude.use!=="function")return; const sm=await window.claude.use("sample"); if(sm){SAMPLE=sm; if(S&&S.act&&S.act[role]==="talk")renderSoon()} }catch(e){}}
 async function talkSummarize(t){
-  const A=nm("a"), B=nm("b");
+  const A=realNm("a"), B=realNm("b");
   const prompt=`你是一位溫和、中立的伴侶溝通協助者。下面是一對伴侶（${A} 和 ${B}）談話的逐字稿。請整理成摘要，給他們兩個人一起確認。
 
 規則：
@@ -621,7 +629,8 @@ window.addEventListener("storage",e=>{if(e.key===KEY){S=load();render()}});
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 function pname(r){return S&&S.names&&S.names[r]?S.names[r]:"你的伴侶"}
 function other(r){return r==="a"?"b":"a"}
-function nm(r){return S&&S.names&&S.names[r]?S.names[r]:(r==="a"?"建立者":(S&&S.hint)||"伴侶")}
+function realNm(r){return S&&S.names&&S.names[r]?S.names[r]:(r==="a"?"建立者":(S&&S.hint)||"伴侶")}
+function nm(r){return (S&&r===role)?"你":realNm(r)}
 function blankPerson(){return {safety:null,ready:null,entry:null,mirror:null,confirm:null,agree:null}}
 function newSpace(nameA,nameB){
   return {id:Math.random().toString(36).slice(2,8),created:new Date().toISOString().slice(0,10),
@@ -676,10 +685,10 @@ function renderTop(st){
   wireWho();
 }
 function whoHtml(){
-  if(SH_ON) return '<div class="who"><span class="me-chip">'+esc(nm(role))+'</span></div>';
+  if(SH_ON) return '<div class="who"><span class="me-chip">'+esc(realNm(role))+'</span></div>';
   return '<div class="who"><span>示範視角</span>'+
-   '<button type="button" class="ra" id="ra" aria-pressed="'+(role==="a")+'">'+esc(nm("a"))+'</button>'+
-   '<button type="button" class="rb" id="rb" aria-pressed="'+(role==="b")+'">'+esc(nm("b"))+'</button></div>';
+   '<button type="button" class="ra" id="ra" aria-pressed="'+(role==="a")+'">'+esc(realNm("a"))+'</button>'+
+   '<button type="button" class="rb" id="rb" aria-pressed="'+(role==="b")+'">'+esc(realNm("b"))+'</button></div>';
 }
 function wireWho(){const a=document.getElementById("ra"),b=document.getElementById("rb"); if(a)a.onclick=()=>switchRole("a"); if(b)b.onclick=()=>switchRole("b")}
 function switchRole(r){if(SH_ON)return;role=r;S.lastRole=r;save();view={};render();window.scrollTo(0,0)}
@@ -846,7 +855,7 @@ function renderInner(){
   NAV=null;
   document.body.classList.toggle("on-cover",!S||soft);
   if(!S){renderTop({});return landing()}
-  if(SH_ON&&SH_FULL){renderTop({mode:"hub"});app.innerHTML=`<section class="cv cv-sub"><h1 class="cv-title fit">這個空間已經有兩個人了</h1><p class="cv-desc seg-auto" style="text-align:left">${esc(nm("a"))}和${esc(nm("b"))}已經在使用這個空間。每個空間只給兩個人使用。</p></section>`;return}
+  if(SH_ON&&SH_FULL){renderTop({mode:"hub"});app.innerHTML=`<section class="cv cv-sub"><h1 class="cv-title fit">這個空間已經有兩個人了</h1><p class="cv-desc seg-auto" style="text-align:left">${esc(realNm("a"))}和${esc(realNm("b"))}已經在使用這個空間。每個空間只給兩個人使用。</p></section>`;return}
   if(soft){renderTop({mode:act});
     if(act==="hub"){const k=role+":hub";if(k!==lastKey){lastKey=k;toTop()} hub()}
     else if(act==="know") know(); else if(act==="review") review(); else if(act==="hw") hwAct(); else if(act==="talk") talkAct(); else if(act==="kt") temp(); else nowAct();
@@ -1276,7 +1285,7 @@ function qReveal(){
   const same=sameCount();
   const ans=QS.map((Q,i)=>{const x=S.q[me].self[i], y=S.q[ot].self[i];const eq=x===y;
     return `<li class="${eq?"ok":""}"><strong>${esc(Q.q)}</strong>${eq?`<span class="kn-same">你們都選：${esc(Q.o[x][1])}</span>`:`<span><b>你</b>${esc(Q.o[x][1])}</span><span><b>${esc(nm(ot))}</b>${esc(Q.o[y][1])}</span>`}</li>`}).join("");
-  const share=`我們在於溫測了「你是哪一種溫度？」\n${nm("a")}是${ROLES[ra].n}，${nm("b")}是${ROLES[rb].n}\n${same} 題選了一樣的答案（共 ${NQ} 題）`;
+  const share=`我們在於溫測了「你是哪一種溫度？」\n${realNm("a")}是${ROLES[ra].n}，${realNm("b")}是${ROLES[rb].n}\n${same} 題選了一樣的答案（共 ${NQ} 題）`;
   const hist=(S.qh||[]).slice().reverse();
   app.innerHTML=`
   <section class="cv cv-sub">
@@ -1816,7 +1825,7 @@ function hub(){
   app.innerHTML=`
   <section class="cv cv-sub">
     <p class="cv-label" style="text-align:left">我們的空間</p>
-    <h1 class="cv-title fit">${esc(nm("a"))}${S.names.b?" 和 "+esc(nm("b")):""}</h1>
+    <h1 class="cv-title fit">${esc(realNm("a"))}${S.names.b?" 和 "+esc(realNm("b")):""}</h1>
     ${role==="a"&&!S.names.b?inviteCard():""}
     ${S.cancelReq&&S.cancelReq.by!==role?cancelBanner():""}${cancelNoteHtml()}
     ${hwUnread().length?`<div class="call-card" role="status"><span class="call-dot" aria-hidden="true"></span><div><strong>${esc(nm(other(role)))}有一段想了很久的心裡話想說</strong><p class="seg-auto">準備好的時候再打開就可以。</p><button type="button" class="btn" id="hw-open">準備好了，打開</button></div></div>`:""}
@@ -1827,7 +1836,7 @@ function hub(){
       <button type="button" class="hub-item" id="go-hw"><div class="cv-icon warm">${ICONS.hw}</div><div class="hub-text"><strong class="fit" data-fg="hub">心裡話</strong><span class="seg-auto">${esc(hwLine())}</span></div><span class="hub-go">${hwUnread().length?"有新的":"寫一段"}</span></button>
       <button type="button" class="hub-item" id="go-talk"><div class="cv-icon cool">${ICONS.talk}</div><div class="hub-text"><strong class="fit" data-fg="hub">談話紀錄</strong><span class="seg-auto">${esc(talkLine())}</span></div><span class="hub-go">${talkWaiting().length?"需要回應":"進入"}</span></button>
       <button type="button" class="hub-item" id="go-review"><div class="cv-icon cool">${ICONS.review}</div><div class="hub-text"><strong class="fit" data-fg="hub">回顧</strong><span class="seg-auto">${esc(reviewLine())}</span></div><span class="hub-go">查看</span></button>
-      <div class="hub-item off" aria-disabled="true"><div class="cv-icon warm">${ICONS.warm}</div><div class="hub-text"><strong class="fit" data-fg="hub">升溫</strong><span class="seg-auto">推薦你們能一起體驗的新鮮事。</span></div><span class="hub-go">即將推出</span></div>
+      <div class="hub-item off" aria-disabled="true"><div class="cv-icon warm">${ICONS.warm}</div><div class="hub-text"><strong class="fit" data-fg="hub">升溫</strong><span class="seg-auto">兩個人可以一起體驗的新鮮事。</span></div><span class="hub-go">即將推出</span></div>
       <div class="hub-item off" aria-disabled="true" data-last="1"><div class="cv-icon warm">${ICONS.daily}</div><div class="hub-text"><strong class="fit" data-fg="hub">日常</strong><span class="seg-auto">每週互相說一句感謝。</span></div><span class="hub-go">即將推出</span></div>
     </div>
     <div class="wipe" id="wipe"><button type="button" class="nav-reset" id="wipe-go">清除所有資料，重新開始</button></div>
@@ -1935,7 +1944,7 @@ function inviteScreen(){
 
 function join(){
   app.innerHTML=`
-  <h1>${esc(nm("a"))} 邀請你進入你們的空間</h1>
+  <h1>${esc(realNm("a"))} 邀請你進入你們的空間</h1>
   <p class="lead">這裡是讓你們在爭執之後，慢慢把話說開的地方。你寫的內容在送出之前，對方都看不到。</p>
   <form class="card" id="f">
     <div><label class="q" for="nb">你的暱稱</label><input type="text" id="nb" maxlength="12" value="${esc(S.hint||"")}"></div>
@@ -1997,6 +2006,7 @@ function paused(){
   document.getElementById("tohub2").onclick=()=>goAct("hub");
 }
 
+function thC(n){const k=(n-1)/9;return `hsl(${Math.round(40-30*k)} ${Math.round(70+12*k)}% ${Math.round(70-20*k)}%)`}
 function ready(){
   const d=draft[role];
   if(view.rest){
@@ -2014,8 +2024,8 @@ function ready(){
   <p class="lead">情緒很強烈的時候，人比較難聽進對方的話。建議兩人都在 4 分以下再開始。</p>
   <div class="card">
     <div><div class="q" id="t-l">你現在的情緒是幾分？</div>
-      <div class="temp" role="group" aria-labelledby="t-l">${[1,2,3,4,5,6,7,8,9,10].map(n=>`<button type="button" data-t="${n}" class="${d.temp===n?"on":""}" aria-pressed="${d.temp===n}">${n}</button>`).join("")}</div>
-      <div class="temp-scale"><span>1 很平靜</span><span>10 非常激動</span></div></div>
+      <div class="thermo" style="--bulb:${d.temp?thC(d.temp):"#EFE4D8"}"><span class="th-bulb" aria-hidden="true"></span><div class="th-tube" role="group" aria-labelledby="t-l">${[1,2,3,4,5,6,7,8,9,10].map(n=>`<button type="button" data-t="${n}" style="--c:${thC(n)}" class="${d.temp&&n<=d.temp?"fill":""}${d.temp===n?" cur":""}" aria-pressed="${d.temp===n}">${n}</button>`).join("")}</div></div>
+      <div class="temp-scale th-scale"><span>1 很平靜</span><span>10 非常激動</span></div></div>
     <div><div class="q" id="w-l">你現在願意聽 ${esc(nm(other(role)))} 的版本嗎？即使它跟你的不一樣。</div>
       <div class="chips" role="group" aria-labelledby="w-l">
       <button type="button" class="chip" data-w="yes" aria-pressed="${d.will==="yes"}">願意</button>
@@ -2023,7 +2033,7 @@ function ready(){
     <div class="err" id="er"></div>
     <div class="actions"><button class="btn" type="button" id="go">繼續</button></div>
   </div>`;
-  app.querySelectorAll("[data-t]").forEach(b=>b.onclick=()=>{d.temp=+b.dataset.t;app.querySelectorAll("[data-t]").forEach(x=>{const on=+x.dataset.t===d.temp;x.classList.toggle("on",on);x.setAttribute("aria-pressed",on)})});
+  app.querySelectorAll("[data-t]").forEach(b=>b.onclick=()=>{d.temp=+b.dataset.t;app.querySelector(".thermo").style.setProperty("--bulb",thC(d.temp));app.querySelectorAll("[data-t]").forEach(x=>{const n=+x.dataset.t;x.classList.toggle("fill",n<=d.temp);x.classList.toggle("cur",n===d.temp);x.setAttribute("aria-pressed",n===d.temp)})});
   app.querySelectorAll("[data-w]").forEach(b=>b.onclick=()=>{d.will=b.dataset.w;app.querySelectorAll("[data-w]").forEach(x=>x.setAttribute("aria-pressed",x===b))});
   document.getElementById("go").onclick=()=>{
     if(!d.temp||!d.will){document.getElementById("er").textContent="兩題都回答後才能繼續。";return}
@@ -2265,7 +2275,7 @@ function final(){
 
 function done(){
   const f=S.final;
-  const text="我們的約定（"+(f.date||S.created)+"）\n"+f.text+"\n\n"+nm("a")+" 願意："+S.a.agree.will+"\n"+nm("b")+" 願意："+S.b.agree.will;
+  const text="我們的約定（"+(f.date||S.created)+"）\n"+f.text+"\n\n"+realNm("a")+" 願意："+S.a.agree.will+"\n"+realNm("b")+" 願意："+S.b.agree.will;
   app.innerHTML=`
   <h1>約定完成</h1>
   <p class="lead">你們把話說清楚了，也寫下了具體的做法。過幾天回來看看，約定有沒有做到、需不需要調整。</p>
