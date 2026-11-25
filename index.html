@@ -2007,26 +2007,26 @@ function paused(){
   document.getElementById("tohub2").onclick=()=>goAct("hub");
 }
 
-function thC(n){const k=(n-1)/9;return `hsl(${Math.round(44-38*k)} ${Math.round(78+4*k)}% ${Math.round(86-46*k)}%)`}
+function thC(n){const k=(n-1)/9;return `hsl(${Math.round(265-265*k)} ${Math.round(30+8*k)}% ${Math.round(80-22*k)}%)`}
 function ready(){
   const d=draft[role];
   if(view.rest){
     app.innerHTML=`
     <h1>先休息一下</h1>
-    <p class="lead">你現在的情緒很需要被照顧。這時候開始談，比較容易讓彼此再受傷。跟著圓圈慢慢吸氣、吐氣，或去走一走、喝杯水，準備好了再回來。</p>
+    <p class="lead">現在先照顧好自己，晚一點再談也沒關係。可以跟著圓圈慢慢吸氣、吐氣，或去走一走、喝杯水，大約二十分鐘後再回來看看。</p>
     <div class="card"><div class="breathe" aria-hidden="true"></div><div class="hint">圓圈變大時吸氣，變小時吐氣。</div></div>
-    <div class="actions"><button class="btn" type="button" id="again">我好一點了，再測一次</button><button class="btn ghost" type="button" id="pause">今天先暫停</button></div>`;
+    <div class="actions"><button class="btn" type="button" id="again">回來看看現在的狀態</button><button class="btn ghost" type="button" id="pause">今天先暫停</button></div>`;
     document.getElementById("again").onclick=()=>{view.rest=false;d.temp=null;d.will=null;render()};
     document.getElementById("pause").onclick=()=>{view.rest=false;d.temp=null;d.will=null;S[role].paused=true;save();render()};
     return;
   }
   app.innerHTML=`
   <h1>你現在準備好談了嗎？</h1>
-  <p class="lead">情緒很強烈的時候，人比較難聽進對方的話。建議兩人都在 4 分以下再開始。</p>
+  <p class="lead">照實際的感覺選就好，沒有對錯，也不會給對方看。</p>
   <div class="card">
     <div><div class="q" id="t-l">你現在的情緒是幾分？</div>
       <div class="thermo" style="--bulb:${d.temp?thC(d.temp):"#EFE4D8"}"><span class="th-bulb" aria-hidden="true"></span><div class="th-tube" role="group" aria-labelledby="t-l">${[1,2,3,4,5,6,7,8,9,10].map(n=>`<button type="button" data-t="${n}" style="--c:${thC(n)}" class="${d.temp&&n<=d.temp?"fill":""}${d.temp===n?" cur":""}" aria-pressed="${d.temp===n}">${n}</button>`).join("")}</div></div>
-      <div class="temp-scale th-scale"><span>1 很平靜</span><span>10 非常激動</span></div></div>
+      <div class="temp-scale th-scale"><span>1 很平靜</span><span>10 非常強烈</span></div></div>
     <div><div class="q" id="w-l">你現在願意聽 ${esc(nm(other(role)))} 的版本嗎？即使它跟你的不一樣。</div>
       <div class="chips" role="group" aria-labelledby="w-l">
       <button type="button" class="chip" data-w="yes" aria-pressed="${d.will==="yes"}">願意</button>
@@ -2051,8 +2051,7 @@ function entry(){
     app.innerHTML=`${title}
     <div class="card bub-card">
       <div class="q" id="f-l">點選你的情緒泡泡</div>
-      ${S[role].fearLoss?`<div class="hint">你提到擔心關係會結束，可以看看「害怕」「孤單」是不是也在你的心裡。</div>`:""}
-      <div class="bub-field" role="group" aria-labelledby="f-l">${FEELINGS.map((f,ix)=>{const [x,y]=BUB_POS[ix%BUB_POS.length];
+            <div class="bub-field" role="group" aria-labelledby="f-l">${FEELINGS.map((f,ix)=>{const [x,y]=BUB_POS[ix%BUB_POS.length];
         return `<button type="button" class="bub" data-f="${f}" style="left:calc(42px + (100% - 84px)*${x/100});top:calc(62px + (100% - 124px)*${y/100});--dx:${(ix*37%13)-6}px;--dy:${(ix*53%15)-7}px;animation-duration:${6+ix%5}s;animation-delay:-${ix*0.7}s">${f}</button>`}).join("")}</div>
       <p class="bub-tip">同一個泡泡點越多下，代表它在心裡越大；最大時再點一下就取消。</p>
       <div class="err" id="er"></div>
@@ -2068,7 +2067,7 @@ function entry(){
     <button type="button" class="linkbtn" id="feel-back" style="justify-self:start">← 回到情緒泡泡</button>
     <div><label class="q" for="fact">你看到、聽到了什麼？</label><div class="hint">只寫事實，像攝影機拍到的那樣，不加形容詞。例如「你回家後看了半小時手機」。</div>${quick("fact",reasonOpts("fact",S[role].reasons||[]))}<textarea id="fact" placeholder="為什麼問：把發生的事和自己的解讀分開，對方比較不會覺得被指責。">${esc(d.fact||"")}</textarea></div>
     <div><label class="q" for="interp">你當時怎麼解讀這件事？</label><div class="hint">例如「我以為你不在乎我說的話」。</div>${quick("interp",reasonOpts("interp",S[role].reasons||[]))}<textarea id="interp" placeholder="為什麼問：同一件事，每個人的解讀不同。說出來，對方才知道你是怎麼想的。">${esc(d.interp||"")}</textarea></div>
-    <div><label class="q" for="trig">這件事有沒有讓你想起過去的某種經驗或感覺？（選填）</label>${S[role].safety==="trigger"?`<div class="hint">如果你願意，可以讓對方知道你的舊傷被碰到了，這能幫對方理解你當時的反應。</div>`:""}${quick("trig")}<textarea id="trig" placeholder="為什麼問：反應特別大時，常是碰到了過去的經驗。說出來，對方比較能體諒。">${esc(d.trig||"")}</textarea></div>
+    <div><label class="q" for="trig">這件事有沒有讓你想起過去的某種經驗或感覺？（選填）</label>${S[role].safety==="trigger"?`<div class="hint">如果願意，可以讓對方知道這件事讓你想起了什麼，這能幫對方理解你當時的反應。</div>`:""}${quick("trig")}<textarea id="trig" placeholder="為什麼問：反應特別大時，常是碰到了過去的經驗。說出來，對方比較能體諒。">${esc(d.trig||"")}</textarea></div>
     <div><label class="q" for="care">在這件事裡，你最在意的是什麼？</label>${quick("care",reasonOpts("care",S[role].reasons||[]))}<textarea id="care" placeholder="為什麼問：吵的常是表面的事。說出真正在意的，才能談到重點。">${esc(d.care||"")}</textarea></div>
     <div><div class="q" id="n-l">你那時候最需要的是什麼？</div>
       <div class="chips" role="group" aria-labelledby="n-l">${NEEDS.map(n=>`<button type="button" class="chip" data-n="${n}" aria-pressed="${d.needs.includes(n)}">${n}</button>`).join("")}</div></div>
