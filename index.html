@@ -510,6 +510,7 @@ function load(){try{const t=localStorage.getItem(KEY);const x=t?JSON.parse(t):nu
   return x}catch(e){return null}}
 function save(){if(S)S.savedAt=Date.now();try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){} cloudQueue()}
 /* 在 Claude 裡開啟時：兩個人共用同一份雲端資料，各自用自己的帳號登入 */
+const DEMO=!!window.__DEMO;
 let SH=null, SH_ON=false, SH_UID=null, SH_BASE=null, SH_FULL=false;
 let pushT=null, pushing=false, pushAgain=false, pendingR=false;
 function cloudQueue(){ if(!SH_ON)return; clearTimeout(pushT); pushT=setTimeout(cloudPush,500) }
@@ -537,6 +538,7 @@ function merge3(b,m,t){
 function setLocal(obj){ try{ if(obj) localStorage.setItem(KEY,JSON.stringify(obj)); else localStorage.removeItem(KEY) }catch(e){} }
 function myRole(){
   if(!S){SH_FULL=false;return}
+  if(DEMO){SH_FULL=false; if(S.lastRole)role=S.lastRole; return}
   const m=S.members||(S.members={});
   if(m.a===SH_UID) role="a";
   else if(m.b===SH_UID) role="b";
@@ -606,7 +608,7 @@ async function cloudInit(){
     const ref=db.doc("shared/space"), priv=db.doc("data/users/"+id+"/space");
     const to=p=>Promise.race([p,new Promise((_,r)=>setTimeout(()=>r(new Error("timeout")),10000))]);
     const snap=await to(ref.get());
-    SH=ref; SH_ON=true; SH_UID=id; document.body.classList.add("cloud");
+    SH=ref; SH_ON=true; SH_UID=id; if(!DEMO)document.body.classList.add("cloud");
     if(window.__resetCloud){S=null;setLocal(null);await ref.delete().catch(()=>{});SH_BASE=null}
     else{
       const d=snap&&snap.exists?snap.data():null;
@@ -687,13 +689,13 @@ function renderTop(st){
   wireWho();
 }
 function whoHtml(){
-  if(SH_ON) return '<div class="who"><span class="me-chip">'+esc(realNm(role))+'</span></div>';
+  if(SH_ON&&!DEMO) return '<div class="who"><span class="me-chip">'+esc(realNm(role))+'</span></div>';
   return '<div class="who"><span>示範視角</span>'+
    '<button type="button" class="ra" id="ra" aria-pressed="'+(role==="a")+'">'+esc(realNm("a"))+'</button>'+
    '<button type="button" class="rb" id="rb" aria-pressed="'+(role==="b")+'">'+esc(realNm("b"))+'</button></div>';
 }
 function wireWho(){const a=document.getElementById("ra"),b=document.getElementById("rb"); if(a)a.onclick=()=>switchRole("a"); if(b)b.onclick=()=>switchRole("b")}
-function switchRole(r){if(SH_ON)return;role=r;S.lastRole=r;save();view={};render();window.scrollTo(0,0)}
+function switchRole(r){if(SH_ON&&!DEMO)return;role=r;S.lastRole=r;save();view={};render();window.scrollTo(0,0)}
 
 
 /* ---------- 返回／取消重來 ---------- */
@@ -1959,8 +1961,8 @@ function join(){
 }
 
 function inviteCard(){
-  if(SH_ON&&S.inviteSent) return `<div class="notify-card" id="inv-mini"><p class="seg-auto">已經邀請${esc(S.hint||"伴侶")}，等對方加入後就能一起使用。</p><button type="button" class="linkbtn" id="inv-again">再看一次邀請方式</button></div>`;
-  if(SH_ON) return `<div class="card a" id="inv-card"><h3>邀請 ${esc(S.hint||"伴侶")} 加入</h3>
+  if(SH_ON&&!DEMO&&S.inviteSent) return `<div class="notify-card" id="inv-mini"><p class="seg-auto">已經邀請${esc(S.hint||"伴侶")}，等對方加入後就能一起使用。</p><button type="button" class="linkbtn" id="inv-again">再看一次邀請方式</button></div>`;
+  if(SH_ON&&!DEMO) return `<div class="card a" id="inv-card"><h3>邀請 ${esc(S.hint||"伴侶")} 加入</h3>
    <p class="seg-auto" style="margin:0">在畫面最上方按「分享」，用${esc(S.hint||"伴侶")}的 email 邀請對方，權限選「編輯者」。</p>
    <p class="hint seg-auto" style="margin:0">對方登入自己的 Claude 帳號、打開這個頁面，就會自動加入。之後兩個人填的內容會即時同步。</p>
    <div class="actions" style="margin:0"><button type="button" class="btn ghost" id="inv-done">我已經分享了</button></div></div>`;
